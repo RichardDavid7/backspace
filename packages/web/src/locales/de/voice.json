@@ -72,7 +72,13 @@
       "screenAudio": "Bildschirmaudio",
       "unknown": "Unbekannt"
     },
-    "remoteParticipant": "Gegenstelle"
+    "remoteParticipant": "Gegenstelle",
+    "audio": {
+      "voice": "Sprache",
+      "music": "Musik",
+      "mono": "Mono (1 Kanal)",
+      "stereo": "Stereo (2 Kanäle)"
+    }
   },
   "screenPicker": {
     "title": "Bildschirm teilen",

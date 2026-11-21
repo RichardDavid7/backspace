@@ -72,7 +72,13 @@
       "screenAudio": "Screen Audio",
       "unknown": "Unknown"
     },
-    "remoteParticipant": "Remote"
+    "remoteParticipant": "Remote",
+    "audio": {
+      "voice": "Voice",
+      "music": "Music",
+      "mono": "Mono",
+      "stereo": "Stereo"
+    }
   },
   "screenPicker": {
     "title": "Share Your Screen",

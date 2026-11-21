@@ -72,7 +72,13 @@
       "screenAudio": "Звук экрана",
       "unknown": "Неизвестно"
     },
-    "remoteParticipant": "Удалённый"
+    "remoteParticipant": "Удалённый",
+    "audio": {
+      "voice": "Голос",
+      "music": "Музыка",
+      "mono": "Моно",
+      "stereo": "Стерео"
+    }
   },
   "screenPicker": {
     "title": "Демонстрация экрана",

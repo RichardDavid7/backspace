@@ -72,7 +72,13 @@
       "screenAudio": "Áudio da tela",
       "unknown": "Desconhecido"
     },
-    "remoteParticipant": "Remoto"
+    "remoteParticipant": "Remoto",
+    "audio": {
+      "voice": "Voz",
+      "music": "Música",
+      "mono": "Mono (1 canal)",
+      "stereo": "Estéreo"
+    }
   },
   "screenPicker": {
     "title": "Compartilhar sua tela",
