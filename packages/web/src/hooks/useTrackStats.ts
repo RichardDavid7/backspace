@@ -17,8 +17,51 @@ export interface AudioTrackStat {
   participantName: string | null;
   bitrate: number;
   codec: string | null;
+  /** Negotiated channel layout for audio tracks (e.g. Opus mono vs stereo). */
+  channels: 'mono' | 'stereo' | null;
+  /** Negotiated Opus profile hint derived from SDP fmtp (`usedtx=1` → voice, `usedtx=0` → music). */
+  opusMode: 'voice' | 'music' | null;
   packetLoss: number | null;
   jitter: number | null;
+}
+
+interface CodecInfo {
+  name: string;
+  channels: 'mono' | 'stereo' | null;
+  opusMode: 'voice' | 'music' | null;
+}
+
+function parseCodecInfo(report: { mimeType?: unknown; sdpFmtpLine?: unknown; channels?: unknown }): CodecInfo {
+  const mime = typeof report.mimeType === 'string' ? report.mimeType : '';
+  const name = mime.split('/')[1] ?? mime;
+  const fmtp = typeof report.sdpFmtpLine === 'string' ? report.sdpFmtpLine.toLowerCase() : '';
+  const isOpus = name.toLowerCase() === 'opus';
+
+  let channels: 'mono' | 'stereo' | null = null;
+  if (isOpus) {
+    if (/(?:^|;)\s*(?:sprop-)?stereo=1\b/.test(fmtp)) {
+      channels = 'stereo';
+    } else if (/(?:^|;)\s*(?:sprop-)?stereo=0\b/.test(fmtp)) {
+      channels = 'mono';
+    } else if (typeof report.channels === 'number') {
+      channels = report.channels >= 2 ? 'stereo' : 'mono';
+    } else {
+      channels = 'mono';
+    }
+  } else if (typeof report.channels === 'number') {
+    channels = report.channels >= 2 ? 'stereo' : 'mono';
+  }
+
+  let opusMode: 'voice' | 'music' | null = null;
+  if (isOpus) {
+    if (/(?:^|;)\s*usedtx=1\b/.test(fmtp)) {
+      opusMode = 'voice';
+    } else if (/(?:^|;)\s*usedtx=0\b/.test(fmtp)) {
+      opusMode = 'music';
+    }
+  }
+
+  return { name, channels, opusMode };
 }
 
 export interface VideoTrackStat {
@@ -163,7 +206,7 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
       };
 
       // Global codec map across all PCs
-      const globalCodecMap = new Map<string, string>();
+      const globalCodecMap = new Map<string, CodecInfo>();
 
       for (const pc of pcs) {
         let reports: RTCStatsReport;
@@ -177,7 +220,7 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
         let selectedPairId: string | null = null;
         reports.forEach((report: any) => {
           if (report.type === 'codec') {
-            globalCodecMap.set(report.id, report.mimeType?.split('/')[1] ?? report.mimeType ?? '');
+            globalCodecMap.set(report.id, parseCodecInfo(report));
           }
           if (report.type === 'transport' && report.selectedCandidatePairId) {
             selectedPairId = report.selectedCandidatePairId;
@@ -289,10 +332,10 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
           }
 
           // Build per-sender codec map
-          const senderCodecMap = new Map<string, string>();
+          const senderCodecMap = new Map<string, CodecInfo>();
           senderStats.forEach((report: any) => {
             if (report.type === 'codec') {
-              senderCodecMap.set(report.id, report.mimeType?.split('/')[1] ?? report.mimeType ?? '');
+              senderCodecMap.set(report.id, parseCodecInfo(report));
             }
           });
 
@@ -317,10 +360,10 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
             }
 
             // Codec: try sender-scoped first, then global fallback
-            let codec: string | null = null;
-            if (report.codecId) {
-              codec = senderCodecMap.get(report.codecId) ?? globalCodecMap.get(report.codecId) ?? null;
-            }
+            const codecInfo = report.codecId
+              ? (senderCodecMap.get(report.codecId) ?? globalCodecMap.get(report.codecId) ?? null)
+              : null;
+            const codec = codecInfo?.name ?? null;
 
             if (kind === 'audio') {
               prev.set(ssrcKey, {
@@ -344,6 +387,8 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
                   participantName: null,
                   bitrate,
                   codec,
+                  channels: codecInfo?.channels ?? null,
+                  opusMode: codecInfo?.opusMode ?? null,
                   packetLoss: null,
                   jitter: null,
                 });
@@ -426,10 +471,10 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
           }
 
           // Build per-receiver codec map
-          const recvCodecMap = new Map<string, string>();
+          const recvCodecMap = new Map<string, CodecInfo>();
           receiverStats.forEach((report: any) => {
             if (report.type === 'codec') {
-              recvCodecMap.set(report.id, report.mimeType?.split('/')[1] ?? report.mimeType ?? '');
+              recvCodecMap.set(report.id, parseCodecInfo(report));
             }
           });
 
@@ -473,10 +518,10 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
             const jitter = report.jitter != null ? Math.round(report.jitter * 1000) : null;
 
             // Codec
-            let codec: string | null = null;
-            if (report.codecId) {
-              codec = recvCodecMap.get(report.codecId) ?? globalCodecMap.get(report.codecId) ?? null;
-            }
+            const codecInfo = report.codecId
+              ? (recvCodecMap.get(report.codecId) ?? globalCodecMap.get(report.codecId) ?? null)
+              : null;
+            const codec = codecInfo?.name ?? null;
 
             if (kind === 'audio') {
               prev.set(ssrcKey, {
@@ -505,6 +550,8 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
                   participantName: identity.participantName,
                   bitrate,
                   codec,
+                  channels: codecInfo?.channels ?? null,
+                  opusMode: codecInfo?.opusMode ?? null,
                   packetLoss: perTrackLoss,
                   jitter,
                 });

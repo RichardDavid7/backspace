@@ -2,13 +2,15 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useTrackStats, AudioTrackStat, VideoTrackStat } from '../../hooks/useTrackStats';
-import { getActiveRoom } from '../../hooks/useLiveKit';
+import { getActiveRoom, resolveEffectiveAudioConfig } from '../../hooks/useLiveKit';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
 import i18n from '../../i18n';
 import { formatters } from '../../i18n/formatters';
 import { VOICE_HEALTH, healthBand, type HealthBand } from '../../utils/voiceHealth';
 import { useVoiceStore } from '../../stores/voiceStore';
+import { useSpaceStore, getChannelOrigin } from '../../stores/spaceStore';
+import { useSettingsStore, selectStreamingLimits } from '../../stores/settingsStore';
 
 interface ConnectionInfoPopoverProps {
   open: boolean;
@@ -86,15 +88,36 @@ const SectionHeader = ({ title }: { title: string }) => (
   </div>
 );
 
-function AudioTrackRow({ track }: { track: AudioTrackStat }) {
+function AudioTrackRow({
+  track,
+  localFallback,
+}: {
+  track: AudioTrackStat;
+  localFallback?: { opusMode: 'voice' | 'music'; channels: 'mono' | 'stereo' };
+}) {
   const label = trackLabel(track.direction, track.source, track.participantName);
+  const isLocalMic = track.direction === 'send' && track.source === 'microphone';
+  const mode = track.opusMode ?? (isLocalMic ? localFallback?.opusMode ?? null : null);
+  const channels = track.channels ?? (isLocalMic ? localFallback?.channels ?? null : null);
+
+  const metaParts: string[] = [];
+  if (track.codec) metaParts.push(track.codec);
+  if (mode) metaParts.push(i18n.t(`voice:connectionInfo.audio.${mode}`));
+  if (channels) metaParts.push(i18n.t(`voice:connectionInfo.audio.${channels}`));
+
   return (
-    <div className="flex items-center justify-between py-[3px]">
-      <span className="text-[12px] text-txt-tertiary truncate mr-2">{label}</span>
-      <span className="text-[12px] font-medium text-txt-secondary whitespace-nowrap">
-        {formatBitrate(track.bitrate)}
-        {track.codec && <span className="text-txt-tertiary ml-2">{track.codec}</span>}
-      </span>
+    <div className="py-[3px]">
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] text-txt-tertiary truncate mr-2">{label}</span>
+        <span className="text-[12px] font-medium text-txt-secondary whitespace-nowrap">
+          {formatBitrate(track.bitrate)}
+        </span>
+      </div>
+      {metaParts.length > 0 && (
+        <div className="pl-3 text-[11px] text-txt-tertiary">
+          {metaParts.join(' · ')}
+        </div>
+      )}
     </div>
   );
 }
@@ -141,6 +164,32 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
   const portalContainer = usePortalContainer();
   const stats = useTrackStats(open);
   const requestedCodec = useVoiceStore((s) => s.screenShareConfig.codec);
+  const audioMode = useVoiceStore((s) => s.audioMode);
+  const audioStereo = useVoiceStore((s) => s.audioStereo);
+  const audioBitrateAuto = useVoiceStore((s) => s.audioBitrateAuto);
+  const audioBitrate = useVoiceStore((s) => s.audioBitrate);
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const currentChannel = useSpaceStore((s) =>
+    currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined,
+  );
+  const channelOrigin = currentVoiceChannelId ? getChannelOrigin(currentVoiceChannelId) : '';
+  const limits = useSettingsStore((s) => selectStreamingLimits(s, channelOrigin) ?? s.streamingLimits);
+  const effectiveLocalAudio = resolveEffectiveAudioConfig({
+    audioMode,
+    audioStereo,
+    audioBitrateAuto,
+    audioBitrate,
+    channelAudioBitrateKbps: currentChannel?.audioBitrateKbps ?? null,
+    channelAllowMusicMode: currentChannel?.allowMusicMode ?? null,
+    instanceDefaultAudioBitrateKbps: limits?.defaultAudioBitrateKbps,
+    instanceMaxAudioBitrateKbps: limits?.maxAudioBitrateKbps,
+    instanceAllowMusicMode: limits?.allowMusicMode,
+    instanceAllowStereoAudio: limits?.allowStereoAudio,
+  });
+  const localAudioFallback = {
+    opusMode: effectiveLocalAudio.audioMode,
+    channels: (effectiveLocalAudio.audioStereo ? 'stereo' : 'mono') as 'mono' | 'stereo',
+  };
 
   const { style } = useFloatingPosition(anchorRef, popoverRef, {
     placement: 'top',
@@ -220,8 +269,8 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
               <>
                 <Divider />
                 <SectionHeader title={t('voice:connectionInfo.section.audio')} />
-                {stats.audioTracks.map((t) => (
-                  <AudioTrackRow key={t.key} track={t} />
+                {stats.audioTracks.map((track) => (
+                  <AudioTrackRow key={track.key} track={track} localFallback={localAudioFallback} />
                 ))}
               </>
             )}
