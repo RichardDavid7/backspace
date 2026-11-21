@@ -39,12 +39,11 @@ function parseCodecInfo(report: { mimeType?: unknown; sdpFmtpLine?: unknown; cha
 
   let channels: 'mono' | 'stereo' | null = null;
   if (isOpus) {
+    // Per RFC 7587, Opus always declares 2 channels in RTP rtpmap (`opus/48000/2`)
+    // even for mono streams, so `report.channels` is always 2. Only treat Opus as
+    // stereo when the negotiated SDP fmtp explicitly signals `stereo=1` or `sprop-stereo=1`.
     if (/(?:^|;)\s*(?:sprop-)?stereo=1\b/.test(fmtp)) {
       channels = 'stereo';
-    } else if (/(?:^|;)\s*(?:sprop-)?stereo=0\b/.test(fmtp)) {
-      channels = 'mono';
-    } else if (typeof report.channels === 'number') {
-      channels = report.channels >= 2 ? 'stereo' : 'mono';
     } else {
       channels = 'mono';
     }
