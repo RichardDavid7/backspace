@@ -102,6 +102,28 @@
         "description": "Wenn du in einem Sprachkanal oder Anruf bist und dir etwas anderes ansiehst, bleibt der Anruf in einem kleinen Fenster sichtbar."
       }
     },
+    "opus": {
+      "sectionTitle": "Audioqualität (Opus)",
+      "mode": {
+        "label": "Audiomodus",
+        "description": "Sprache optimiert für Stimmen mit DTX. Musik deaktiviert Sprachverarbeitung und DTX für volle Studioqualität.",
+        "voice": "Sprache",
+        "music": "Musik"
+      },
+      "stereo": {
+        "label": "Stereo-Audio",
+        "description": "Erfasst und überträgt echtes 2-Kanal-Stereo. Umgeht die Mono-KI-Rauschunterdrückung, solange aktiv."
+      },
+      "bitrate": {
+        "label": "Bitrate",
+        "hintDefault": "64 kbps ist der Standard für Sprache. Schiebe den Regler für Qualität vs. Bandbreite.",
+        "warningLow": "Sehr niedrige Bitraten können die Sprachverständlichkeit deutlich verringern.",
+        "warningHigh": "Höhere Bitraten verbrauchen mehr Bandbreite und können langsamere Verbindungen beeinträchtigen.",
+        "warningVeryHigh": "Sehr hohe Studio-Bitrate — hoher Bandbreitenbedarf; ideal für Musik oder Audio-Interfaces bei schneller Verbindung."
+      },
+      "bypassNoticeMusic": "Die Sprachverarbeitungs-Optionen unten sind im Musikmodus deaktiviert.",
+      "bypassNoticeStereo": "KI-Rauschunterdrückung (RNNoise) ist nur Mono und wird bei aktiviertem Stereo-Audio umgangen."
+    },
     "processing": {
       "sectionTitle": "Sprachverarbeitung",
       "noiseSuppression": {

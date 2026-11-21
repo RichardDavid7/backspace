@@ -87,6 +87,11 @@ export interface VoiceChannelElapsed {
   observedAt: number;
 }
 
+export type AudioMode = 'voice' | 'music';
+export const MIN_AUDIO_BITRATE_KBPS = 8;
+export const MAX_AUDIO_BITRATE_KBPS = 512;
+export const DEFAULT_AUDIO_BITRATE_KBPS = 64;
+
 export interface VoiceState {
   voiceUsers: Map<string, string[]>; // channelId → userIds
   voiceChannelElapsedSeconds: Map<string, VoiceChannelElapsed>; // channelId → server duration + local observation time
@@ -159,6 +164,12 @@ export interface VoiceState {
   hideNonVideoParticipants: boolean;         // false (default) = show everyone; true = hide tiles without active camera/stream
   setHideNonVideoParticipants: (hide: boolean) => void;
   toggleHideNonVideoParticipants: () => void;
+  audioMode: AudioMode;                      // 'voice' (default) = speech DTX/RED; 'music' = high-fidelity studio
+  setAudioMode: (mode: AudioMode) => void;
+  audioStereo: boolean;                      // false (default) = mono; true = stereo capture + Opus forceStereo
+  setAudioStereo: (stereo: boolean) => void;
+  audioBitrate: number;                      // 8–512 kbps (64 default)
+  setAudioBitrate: (kbps: number) => void;
   streamAttenuationEnabled: boolean;        // global toggle, default true
   streamAttenuationStrength: number;        // 0-100, default 50
   setStreamVolume: (userId: string, volume: number) => void;
@@ -341,6 +352,15 @@ export const useVoiceStore = create<VoiceState>()(
       hideNonVideoParticipants: false,
       setHideNonVideoParticipants: (hide) => set({ hideNonVideoParticipants: hide }),
       toggleHideNonVideoParticipants: () => set((s) => ({ hideNonVideoParticipants: !s.hideNonVideoParticipants })),
+      audioMode: 'voice',
+      setAudioMode: (mode) => set({ audioMode: mode }),
+      audioStereo: false,
+      setAudioStereo: (stereo) => set({ audioStereo: stereo }),
+      audioBitrate: DEFAULT_AUDIO_BITRATE_KBPS,
+      setAudioBitrate: (kbps) => {
+        const clamped = Math.min(MAX_AUDIO_BITRATE_KBPS, Math.max(MIN_AUDIO_BITRATE_KBPS, Math.round(kbps)));
+        set({ audioBitrate: clamped });
+      },
 
       // Stream widget state
       streamVolumes: new Map(),
@@ -958,6 +978,9 @@ export const useVoiceStore = create<VoiceState>()(
         messageSoundAllChannels: state.messageSoundAllChannels,
         pipEnabled: state.pipEnabled,
         hideNonVideoParticipants: state.hideNonVideoParticipants,
+        audioMode: state.audioMode,
+        audioStereo: state.audioStereo,
+        audioBitrate: state.audioBitrate,
         streamAttenuationEnabled: state.streamAttenuationEnabled,
         streamAttenuationStrength: state.streamAttenuationStrength,
         // Per-user preferences (Map → plain object for JSON)
