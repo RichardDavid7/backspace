@@ -87,6 +87,7 @@ export function VoiceChannel({ channelId, channelName, onClick, locked, canManag
   const participantMutes = useVoiceStore((s) => s.participantMutes);
   const unwatchedCameras = useVoiceStore((s) => s.unwatchedCameras);
   const speakingUserIds = useVoiceStore((s) => s.speakingUserIds);
+  const activeSoundboardUsers = useVoiceStore((s) => s.activeSoundboardUsers);
   const localConnectionQuality = useVoiceStore((s) => s.connectionQuality);
   const connectionQualities = useVoiceStore((s) => s.connectionQualities);
   const voiceConnectionStatus = useVoiceStore((s) => s.voiceConnectionStatus);
@@ -123,10 +124,20 @@ export function VoiceChannel({ channelId, channelName, onClick, locked, canManag
       items.push({
         key: 'mute-user',
         type: 'checkbox',
-        label: 'Mute User',
+        label: t('voice:participantMenu.muteUser'),
         subscribe: useVoiceStore.subscribe,
         getChecked: () => useVoiceStore.getState().participantMutes.get(userId) ?? false,
         onChange: (checked) => useVoiceStore.getState().setParticipantMute(userId, checked),
+      });
+
+      // Mute Soundboard checkbox (per-user)
+      items.push({
+        key: 'mute-soundboard-user',
+        type: 'checkbox',
+        label: t('voice:soundboard.muteUser'),
+        subscribe: useVoiceStore.subscribe,
+        getChecked: () => useVoiceStore.getState().soundboardMutedUserIds.has(userId),
+        onChange: (checked) => useVoiceStore.getState().setUserSoundboardMuted(userId, checked),
       });
 
       items.push({ key: 'vol-sep', type: 'separator' });
@@ -140,7 +151,7 @@ export function VoiceChannel({ channelId, channelName, onClick, locked, canManag
 
       openContextMenu({ x: e.clientX, y: e.clientY }, items);
     },
-    [myIdHere, channelId, openContextMenu],
+    [myIdHere, channelId, openContextMenu, t],
   );
 
   return (
@@ -269,6 +280,7 @@ export function VoiceChannel({ channelId, channelName, onClick, locked, canManag
                   isPermissionMuted={isPermissionMuted}
                   isLocallyMuted={userId !== myIdHere && (participantMutes.get(userId) ?? false)}
                   isSpeaking={speakingUserIds.has(userId)}
+                  activeSoundboard={activeSoundboardUsers.get(userId) ?? null}
                   connectionWarning={connectionWarning}
                 />
               </div>

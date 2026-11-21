@@ -84,6 +84,9 @@ import type {
   ReattachResponse,
   TelemetryPayload,
   TelemetryStatus,
+  SoundboardScopeType,
+  SoundboardSound,
+  SoundboardListResponse,
 } from '@backspace/shared';
 import { MESSAGE_PAGING_AFTER, MESSAGE_PAGING_HEADER } from '@backspace/shared';
 
@@ -447,6 +450,14 @@ export class BackspaceApiClient {
     remove: (id: string) => Promise<{ success: boolean }>;
   };
 
+  readonly soundboard: {
+    list: (params?: { spaceId?: string; dmChannelId?: string }) => Promise<SoundboardListResponse>;
+    create: (formData: FormData) => Promise<SoundboardSound>;
+    update: (id: string, data: FormData | { name?: string; emoji?: string }) => Promise<SoundboardSound>;
+    reorder: (scopeType: SoundboardScopeType, scopeId: string | null, orderedIds: string[]) => Promise<{ success: boolean }>;
+    remove: (id: string) => Promise<{ success: boolean }>;
+  };
+
   constructor(baseUrl: string, getToken: () => string | null, onUnauthorized?: () => void) {
     /** Send a request and return the successful response; a failure throws. */
     async function send(
@@ -514,6 +525,49 @@ export class BackspaceApiClient {
       return response.json() as Promise<T>;
     }
 
+    async function requestFormData<T>(
+      method: string,
+      path: string,
+      formData: FormData,
+    ): Promise<T> {
+      const headers: Record<string, string> = {};
+      const token = getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      let response: Response;
+      try {
+        response = await fetch(`${baseUrl}${path}`, {
+          method,
+          headers,
+          body: formData,
+          signal: controller.signal,
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          throw new Error('Request timed out');
+        }
+        throw err;
+      }
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        if (response.status === 401 && onUnauthorized) {
+          onUnauthorized();
+        }
+        if (response.status === 429) {
+          const body: unknown = await response.json().catch(() => ({}));
+          const retryAfter = (body as { retryAfter?: number }).retryAfter
+            ?? (parseInt(response.headers.get('retry-after') || '', 10) || 60);
+          throw new RateLimitError(retryAfter, body);
+        }
+        throw HttpError.fromBody(response.status, await response.json().catch(() => null));
+      }
+      return response.json() as Promise<T>;
+    }
+
     /**
      * The page after `after` in a channel's or DM's history. `forward` says
      * whether the server honoured the cursor; a server that predates forward
@@ -535,6 +589,24 @@ export class BackspaceApiClient {
       collect: ({ id, token, name }) => request('POST', `/stickers/${encodeURIComponent(id)}/collect`, { token, name }),
       rename: (id, name) => request('PATCH', `/stickers/${encodeURIComponent(id)}`, { name }),
       remove: (id) => request('DELETE', `/stickers/${encodeURIComponent(id)}`),
+    };
+
+    this.soundboard = {
+      list: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.spaceId) qs.set('spaceId', params.spaceId);
+        if (params?.dmChannelId) qs.set('dmChannelId', params.dmChannelId);
+        const suffix = qs.toString() ? `?${qs.toString()}` : '';
+        return request<SoundboardListResponse>('GET', `/soundboard${suffix}`);
+      },
+      create: (formData) => requestFormData<SoundboardSound>('POST', '/soundboard', formData),
+      update: (id, data) =>
+        data instanceof FormData
+          ? requestFormData<SoundboardSound>('PATCH', `/soundboard/${encodeURIComponent(id)}`, data)
+          : request<SoundboardSound>('PATCH', `/soundboard/${encodeURIComponent(id)}`, data),
+      reorder: (scopeType, scopeId, orderedIds) =>
+        request<{ success: boolean }>('PUT', '/soundboard/reorder', { scopeType, scopeId, orderedIds }),
+      remove: (id) => request<{ success: boolean }>('DELETE', `/soundboard/${encodeURIComponent(id)}`),
     };
 
     this.auth = {
