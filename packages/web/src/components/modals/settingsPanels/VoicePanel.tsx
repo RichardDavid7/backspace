@@ -178,11 +178,26 @@ export function VoicePanel() {
                 background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${bitratePercent}%, rgb(var(--interactive-muted)) ${bitratePercent}%, rgb(var(--interactive-muted)) 100%)`,
               }}
             />
-            <div className="flex justify-between text-[10px] text-txt-tertiary tabular-nums mt-1">
-              {[MIN_AUDIO_BITRATE_KBPS, 64, 128, 256, MAX_AUDIO_BITRATE_KBPS].map((kbps) => (
-                // i18n-check: allow-literal "kbps" is an SI audio bitrate unit
-                <span key={kbps}>{kbps} kbps</span>
-              ))}
+            <div className="relative h-4 text-[10px] text-txt-tertiary tabular-nums mt-1">
+              {[MIN_AUDIO_BITRATE_KBPS, 128, 256, 384, MAX_AUDIO_BITRATE_KBPS].map((kbps) => {
+                const pct = ((kbps - MIN_AUDIO_BITRATE_KBPS) / (MAX_AUDIO_BITRATE_KBPS - MIN_AUDIO_BITRATE_KBPS)) * 100;
+                const posClass =
+                  kbps === MIN_AUDIO_BITRATE_KBPS
+                    ? 'left-0'
+                    : kbps === MAX_AUDIO_BITRATE_KBPS
+                      ? 'right-0'
+                      : '-translate-x-1/2';
+                const posStyle =
+                  kbps === MIN_AUDIO_BITRATE_KBPS || kbps === MAX_AUDIO_BITRATE_KBPS
+                    ? undefined
+                    : { left: `${pct}%` };
+                return (
+                  <span key={kbps} className={`absolute top-0 ${posClass}`} style={posStyle}>
+                    {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
+                    {kbps} kbps
+                  </span>
+                );
+              })}
             </div>
             <p className={`text-xs mt-2 ${bitrateNotice.tone}`}>{bitrateNotice.text}</p>
           </div>
