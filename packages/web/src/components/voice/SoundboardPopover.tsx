@@ -27,6 +27,9 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   const setSoundboardVolume = useVoiceStore((s) => s.setSoundboardVolume);
   const setSoundboardMuted = useVoiceStore((s) => s.setSoundboardMuted);
   const markUserPlayingSoundboard = useVoiceStore((s) => s.markUserPlayingSoundboard);
+  const activeSoundboardClips = useVoiceStore((s) => s.activeSoundboardClips);
+  const tryStartSoundboardClip = useVoiceStore((s) => s.tryStartSoundboardClip);
+  const finishSoundboardClip = useVoiceStore((s) => s.finishSoundboardClip);
   const channelToSpaceMap = useSpaceStore((s) => s.channelToSpaceMap);
 
   const origin = voiceSessionOrigin(useVoiceStore.getState());
@@ -36,8 +39,8 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
 
   const [instanceSounds, setInstanceSounds] = useState<SoundboardSound[]>([]);
   const [scopeSounds, setScopeSounds] = useState<SoundboardSound[]>([]);
+  const [maxConcurrentSounds, setMaxConcurrentSounds] = useState(3);
   const [loading, setLoading] = useState(false);
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
@@ -50,6 +53,7 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       });
       setInstanceSounds(data.instanceSounds);
       setScopeSounds(data.scopedSounds);
+      setMaxConcurrentSounds(data.maxConcurrentSounds ?? 3);
     } catch {
       addToast(t('soundboard.loadFailed'), 'warning');
     } finally {
@@ -77,14 +81,13 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   };
 
   const handlePlay = async (sound: SoundboardSound) => {
+    if (!tryStartSoundboardClip(sound.id, sound.durationMs, maxConcurrentSounds)) {
+      return;
+    }
+
     const resolvedUrl = sound.fileUrl.startsWith('/') && origin
       ? `${origin}${sound.fileUrl}`
       : sound.fileUrl;
-
-    setPlayingId(sound.id);
-    setTimeout(() => {
-      setPlayingId((curr) => (curr === sound.id ? null : curr));
-    }, Math.max(500, Math.min(sound.durationMs || 1500, 10_000)));
 
     const myUserId = getMyUserIdForOrigin(origin);
     if (myUserId && !soundboardMuted) {
@@ -92,9 +95,20 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     }
 
     if (!isDeafened && !soundboardMuted) {
-      void AudioManager.getInstance().playSoundUrl(resolvedUrl, {
-        volume: (soundboardVolume / 100) * 0.8,
-      });
+      void AudioManager.getInstance()
+        .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 })
+        .then((res) => {
+          if (!res) {
+            finishSoundboardClip(sound.id);
+            return;
+          }
+          res.source.addEventListener('ended', () => {
+            finishSoundboardClip(sound.id);
+          });
+        })
+        .catch(() => {
+          finishSoundboardClip(sound.id);
+        });
     }
 
     const room = getActiveRoom();
@@ -111,19 +125,25 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     }
   };
 
+  const atConcurrencyLimit = activeSoundboardClips.size >= maxConcurrentSounds;
+
   const renderSoundGrid = (items: SoundboardSound[]) => (
     <div className="grid grid-cols-2 gap-1.5">
       {items.map((sound) => {
-        const isPlaying = playingId === sound.id;
+        const isPlaying = activeSoundboardClips.has(sound.id);
+        const isBlocked = !isPlaying && atConcurrencyLimit;
         return (
           <button
             key={sound.id}
             type="button"
+            disabled={isPlaying || isBlocked}
             onClick={() => void handlePlay(sound)}
-            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors cursor-pointer ${
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors ${
               isPlaying
-                ? 'bg-accent-primary/20 border-accent-primary/60 text-txt-primary'
-                : 'bg-surface-channel border-white/[0.06] hover:bg-interactive-hover hover:border-white/10 text-txt-primary'
+                ? 'bg-accent-primary/20 border-accent-primary/60 text-txt-primary cursor-default'
+                : isBlocked
+                  ? 'bg-surface-channel border-white/[0.04] text-txt-primary opacity-45 cursor-not-allowed'
+                  : 'bg-surface-channel border-white/[0.06] hover:bg-interactive-hover hover:border-white/10 text-txt-primary cursor-pointer'
             }`}
             title={sound.name}
           >

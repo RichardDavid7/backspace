@@ -485,6 +485,10 @@
     "maxSoundboardPerScope": {
       "label": "Max custom sounds per space",
       "description": "Limit how many soundboard clips each space can upload (0 disables custom uploads)."
+    },
+    "maxConcurrentSoundboard": {
+      "label": "Max simultaneous soundboard clips",
+      "description": "Prevents audio flooding by limiting how many clips can play at the same time in a voice call."
     }
   }
 }

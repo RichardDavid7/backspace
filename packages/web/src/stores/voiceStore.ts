@@ -165,6 +165,9 @@ export interface VoiceState {
   setUserSoundboardMuted: (userId: string, muted: boolean) => void;
   activeSoundboardUsers: Map<string, { emoji: string; name: string; until: number }>;
   markUserPlayingSoundboard: (userId: string, emoji: string, name: string, durationMs: number) => void;
+  activeSoundboardClips: Map<string, number>;
+  tryStartSoundboardClip: (soundId: string, durationMs: number, maxConcurrent: number) => boolean;
+  finishSoundboardClip: (soundId: string) => void;
   messageSoundAllChannels: boolean;          // false (default) = DM + mention only; true = every channel
   setMessageSoundAllChannels: (allChannels: boolean) => void;
   pipEnabled: boolean;                       // true (default) = floating window shows while browsing other channels
@@ -386,6 +389,45 @@ export const useVoiceStore = create<VoiceState>()(
             return { activeSoundboardUsers: next };
           });
         }, clampedMs + 80);
+      },
+      activeSoundboardClips: new Map(),
+      tryStartSoundboardClip: (soundId, durationMs, maxConcurrent) => {
+        const now = Date.now();
+        const limit = Math.max(1, Math.min(10, Math.round(maxConcurrent || 3)));
+        const current = get().activeSoundboardClips;
+        const active = new Map<string, number>();
+        for (const [id, until] of current) {
+          if (until > now) active.set(id, until);
+        }
+        // Do not replay the same clip while it is still playing, and cap simultaneous clips.
+        if (active.has(soundId) || active.size >= limit) {
+          if (active.size !== current.size) {
+            set({ activeSoundboardClips: active });
+          }
+          return false;
+        }
+        const clampedMs = Math.max(400, Math.min(15_000, Math.round(durationMs || 2000)));
+        const until = now + clampedMs;
+        active.set(soundId, until);
+        set({ activeSoundboardClips: active });
+        setTimeout(() => {
+          set((state) => {
+            const exp = state.activeSoundboardClips.get(soundId);
+            if (!exp || exp > Date.now() + 50) return state;
+            const next = new Map(state.activeSoundboardClips);
+            next.delete(soundId);
+            return { activeSoundboardClips: next };
+          });
+        }, clampedMs + 120);
+        return true;
+      },
+      finishSoundboardClip: (soundId) => {
+        set((state) => {
+          if (!state.activeSoundboardClips.has(soundId)) return state;
+          const next = new Map(state.activeSoundboardClips);
+          next.delete(soundId);
+          return { activeSoundboardClips: next };
+        });
       },
       messageSoundAllChannels: false,
       setMessageSoundAllChannels: (allChannels) => set({ messageSoundAllChannels: allChannels }),
@@ -885,6 +927,7 @@ export const useVoiceStore = create<VoiceState>()(
           unwatchedCameras: new Set(),
           streamWatchers: new Map(),
           activeSoundboardUsers: new Map(),
+          activeSoundboardClips: new Map(),
           micPermissionDenied: false,
         });
       },
@@ -924,6 +967,7 @@ export const useVoiceStore = create<VoiceState>()(
         unwatchedCameras: new Set(),
         streamWatchers: new Map(),
         activeSoundboardUsers: new Map(),
+        activeSoundboardClips: new Map(),
         spaceMutedUserIds: new Set(),
         spaceDeafenedUserIds: new Set(),
         permissionMutedUserIds: new Set(),
@@ -1062,6 +1106,7 @@ export const useVoiceStore = create<VoiceState>()(
         merged.watchingStreams = currentState.watchingStreams;
         merged.unwatchedCameras = currentState.unwatchedCameras;
         merged.activeSoundboardUsers = currentState.activeSoundboardUsers;
+        merged.activeSoundboardClips = currentState.activeSoundboardClips;
         if (typeof merged.soundboardVolume === 'number') {
           merged.soundboardVolume = Math.max(0, Math.min(100, Math.round(merged.soundboardVolume)));
         }

@@ -500,6 +500,10 @@
     "maxSoundboardPerScope": {
       "label": "Máximo de efeitos por espaço",
       "description": "Limite de áudios personalizados que cada espaço pode enviar (0 desativa envios personalizados)."
+    },
+    "maxConcurrentSoundboard": {
+      "label": "Máximo de efeitos simultâneos",
+      "description": "Evita flood de áudio limitando quantos efeitos sonoros podem tocar ao mesmo tempo em uma chamada."
     }
   }
 }

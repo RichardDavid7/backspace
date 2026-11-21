@@ -14,4 +14,5 @@ CREATE TABLE `soundboard_sounds` (
 	FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );--> statement-breakpoint
 CREATE INDEX `idx_soundboard_scope` ON `soundboard_sounds` (`scope_type`,`scope_id`,`position`);--> statement-breakpoint
-ALTER TABLE `instance_settings` ADD `max_soundboard_sounds_per_scope` integer DEFAULT 32 NOT NULL;
+ALTER TABLE `instance_settings` ADD `max_soundboard_sounds_per_scope` integer DEFAULT 32 NOT NULL;--> statement-breakpoint
+ALTER TABLE `instance_settings` ADD `max_concurrent_soundboard_sounds` integer DEFAULT 3 NOT NULL;

@@ -638,15 +638,30 @@ export function useLiveKit() {
         if (vs.soundboardMuted || vs.soundboardMutedUserIds.has(senderUserId)) {
           return;
         }
+        const maxConcurrent = useSettingsStore.getState().streamingLimits?.maxConcurrentSoundboardSounds ?? 3;
+        if (!vs.tryStartSoundboardClip(sb.soundId, sb.durationMs, maxConcurrent)) {
+          return;
+        }
         vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
         if (vs.isDeafened) return;
         const origin = voiceSessionOrigin(vs);
         const resolvedUrl = sb.fileUrl.startsWith('/') && origin
           ? `${origin}${sb.fileUrl}`
           : sb.fileUrl;
-        void AudioManager.getInstance().playSoundUrl(resolvedUrl, {
-          volume: (vs.soundboardVolume / 100) * 0.8,
-        });
+        void AudioManager.getInstance()
+          .playSoundUrl(resolvedUrl, { volume: (vs.soundboardVolume / 100) * 0.8 })
+          .then((res) => {
+            if (!res) {
+              useVoiceStore.getState().finishSoundboardClip(sb.soundId);
+              return;
+            }
+            res.source.addEventListener('ended', () => {
+              useVoiceStore.getState().finishSoundboardClip(sb.soundId);
+            });
+          })
+          .catch(() => {
+            useVoiceStore.getState().finishSoundboardClip(sb.soundId);
+          });
         return;
       }
     }

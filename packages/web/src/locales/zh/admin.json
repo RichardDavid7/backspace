@@ -470,6 +470,10 @@
     "maxSoundboardPerScope": {
       "label": "每个空间的最大自定义音效数",
       "description": "限制每个空间可上传的音效板片段数量（0 表示禁用自定义上传）。"
+    },
+    "maxConcurrentSoundboard": {
+      "label": "最多同时播放的音效数",
+      "description": "限制语音通话中同时播放的音效片段数量，防止音频刷屏。"
     }
   }
 }

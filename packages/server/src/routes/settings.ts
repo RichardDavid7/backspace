@@ -48,6 +48,7 @@ function rowToLimits(row: typeof schema.instanceSettings.$inferSelect): Instance
     allowMusicMode: (row.allowMusicMode ?? 1) === 1,
     allowStereoAudio: (row.allowStereoAudio ?? 1) === 1,
     maxSoundboardSoundsPerScope: row.maxSoundboardSoundsPerScope ?? 32,
+    maxConcurrentSoundboardSounds: row.maxConcurrentSoundboardSounds ?? 3,
   };
 }
 
@@ -251,6 +252,18 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         return sendError(reply, 400, 'validation_failed');
       }
       updateData.maxSoundboardSoundsPerScope = Math.round(body.maxSoundboardSoundsPerScope);
+    }
+
+    if (body.maxConcurrentSoundboardSounds !== undefined) {
+      if (
+        typeof body.maxConcurrentSoundboardSounds !== 'number'
+        || !Number.isFinite(body.maxConcurrentSoundboardSounds)
+        || body.maxConcurrentSoundboardSounds < 1
+        || body.maxConcurrentSoundboardSounds > 10
+      ) {
+        return sendError(reply, 400, 'validation_failed');
+      }
+      updateData.maxConcurrentSoundboardSounds = Math.round(body.maxConcurrentSoundboardSounds);
     }
 
     if (body.bitrateMatrixOverrides !== undefined) {

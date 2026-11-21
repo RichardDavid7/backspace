@@ -63,14 +63,20 @@ function isInstanceAdmin(userId: string): boolean {
   return u?.isAdmin === 1;
 }
 
-function getMaxSoundsPerScope(): number {
+function getSoundboardLimits(): { maxSoundsPerScope: number; maxConcurrentSounds: number } {
   const db = getDb();
   const row = db
-    .select({ maxSoundboardSoundsPerScope: schema.instanceSettings.maxSoundboardSoundsPerScope })
+    .select({
+      maxSoundboardSoundsPerScope: schema.instanceSettings.maxSoundboardSoundsPerScope,
+      maxConcurrentSoundboardSounds: schema.instanceSettings.maxConcurrentSoundboardSounds,
+    })
     .from(schema.instanceSettings)
     .where(eq(schema.instanceSettings.id, 1))
     .get();
-  return row?.maxSoundboardSoundsPerScope ?? 32;
+  return {
+    maxSoundsPerScope: row?.maxSoundboardSoundsPerScope ?? 32,
+    maxConcurrentSounds: row?.maxConcurrentSoundboardSounds ?? 3,
+  };
 }
 
 function canManageScope(userId: string, scopeType: SoundboardScopeType, scopeId: string): boolean {
@@ -142,12 +148,14 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    const limits = getSoundboardLimits();
     return reply.code(200).send({
       instanceSounds: instanceRows.map(rowToSound),
       scopedSounds: scopedRows.map(rowToSound),
       canManageInstance: isInstanceAdmin(request.userId),
       canManageScope: scopeManageable,
-      maxSoundsPerScope: getMaxSoundsPerScope(),
+      maxSoundsPerScope: limits.maxSoundsPerScope,
+      maxConcurrentSounds: limits.maxConcurrentSounds,
     });
   });
 
@@ -223,8 +231,8 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       .all();
 
     if (scopeType !== 'instance') {
-      const limit = getMaxSoundsPerScope();
-      if (existing.length >= limit) {
+      const { maxSoundsPerScope } = getSoundboardLimits();
+      if (existing.length >= maxSoundsPerScope) {
         return sendError(reply, 400, 'validation_failed');
       }
     }

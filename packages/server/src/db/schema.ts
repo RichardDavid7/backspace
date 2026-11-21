@@ -418,6 +418,7 @@ export const instanceSettings = sqliteTable('instance_settings', {
   allowMusicMode: integer('allow_music_mode').notNull().default(1),
   allowStereoAudio: integer('allow_stereo_audio').notNull().default(1),
   maxSoundboardSoundsPerScope: integer('max_soundboard_sounds_per_scope').notNull().default(32),
+  maxConcurrentSoundboardSounds: integer('max_concurrent_soundboard_sounds').notNull().default(3),
   maxUploadSizeBytes: integer('max_upload_size_bytes'),
   federationRelayEnabled: integer('federation_relay_enabled').notNull().default(1),
   federationRelayTtlDays: integer('federation_relay_ttl_days').notNull().default(30),

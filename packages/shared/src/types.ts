@@ -1207,6 +1207,8 @@ export interface InstanceStreamingLimits {
   allowStereoAudio?: boolean;
   /** Maximum custom soundboard clips per space (0 disables custom uploads, default 32). */
   maxSoundboardSoundsPerScope?: number;
+  /** Maximum soundboard clips allowed to play simultaneously in a room (1–10, default 3). */
+  maxConcurrentSoundboardSounds?: number;
 }
 
 export type SoundboardScopeType = 'instance' | 'space';
@@ -1231,6 +1233,7 @@ export interface SoundboardListResponse {
   canManageInstance: boolean;
   canManageScope: boolean;
   maxSoundsPerScope?: number;
+  maxConcurrentSounds?: number;
 }
 
 // ─── Federation Types ──────────────────────────────────────────────────────
