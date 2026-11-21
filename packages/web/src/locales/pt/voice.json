@@ -321,6 +321,11 @@
     "deletedToast": "Som excluído.",
     "saveFailed": "Não foi possível salvar o som.",
     "deleteFailed": "Não foi possível excluir o som.",
-    "reorderFailed": "Não foi possível reordenar os sons."
+    "reorderFailed": "Não foi possível reordenar os sons.",
+    "folderLabel": "Pasta (opcional)",
+    "folderPlaceholder": "Memes, Reações, Jogos…",
+    "noFolder": "Sem pasta",
+    "searchPlaceholder": "Buscar sons ou pastas…",
+    "addToFolder": "Adicionar som em {{folder}}"
   }
 }

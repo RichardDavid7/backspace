@@ -14,6 +14,7 @@ import { generateSnowflake } from '../utils/snowflake.js';
 const MAX_SOUNDBOARD_BYTES = 5 * 1024 * 1024; // 5 MB
 const MAX_SOUNDBOARD_NAME = 40;
 const MAX_SOUNDBOARD_EMOJI = 16;
+const MAX_SOUNDBOARD_FOLDER = 32;
 const SAFE_FILE_NAME = /^[a-zA-Z0-9_-]+\.(wav|mp3|ogg|webm|m4a)$/;
 
 const MIME_TO_EXT: Record<string, string> = {
@@ -47,6 +48,7 @@ function rowToSound(row: typeof schema.soundboardSounds.$inferSelect): Soundboar
     scopeId: row.scopeId,
     name: row.name,
     emoji: row.emoji,
+    folder: row.folder ?? null,
     fileUrl: `/api/soundboard/files/${row.fileName}`,
     durationMs: row.durationMs,
     position: row.position,
@@ -164,6 +166,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     let originalName = '';
     let name = '';
     let emoji = '🔊';
+    let folder: string | null = null;
     let scopeType: SoundboardScopeType = 'instance';
     let scopeId = 'instance';
     let durationMs = 0;
@@ -186,6 +189,10 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
         const val = typeof part.value === 'string' ? part.value : '';
         if (part.fieldname === 'name') name = val.trim();
         else if (part.fieldname === 'emoji' && val.trim()) emoji = val.trim().slice(0, MAX_SOUNDBOARD_EMOJI);
+        else if (part.fieldname === 'folder') {
+          const trimmed = val.trim().slice(0, MAX_SOUNDBOARD_FOLDER);
+          folder = trimmed.length > 0 ? trimmed : null;
+        }
         else if (part.fieldname === 'scopeType' && (val === 'instance' || val === 'space' || val === 'dm')) scopeType = val;
         else if (part.fieldname === 'scopeId' && val.trim()) scopeId = val.trim();
         else if (part.fieldname === 'durationMs') {
@@ -233,6 +240,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       scopeId,
       name,
       emoji,
+      folder,
       fileName,
       mimeType: EXT_TO_MIME[ext] ?? 'audio/wav',
       durationMs,
@@ -287,6 +295,9 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
             updates.name = val.trim().slice(0, MAX_SOUNDBOARD_NAME);
           } else if (part.fieldname === 'emoji' && val.trim()) {
             updates.emoji = val.trim().slice(0, MAX_SOUNDBOARD_EMOJI);
+          } else if (part.fieldname === 'folder') {
+            const trimmed = val.trim().slice(0, MAX_SOUNDBOARD_FOLDER);
+            updates.folder = trimmed.length > 0 ? trimmed : null;
           } else if (part.fieldname === 'durationMs') {
             const parsed = Number(val);
             if (Number.isFinite(parsed) && parsed >= 0) updates.durationMs = Math.round(parsed);
@@ -305,7 +316,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
         updates.mimeType = EXT_TO_MIME[ext] ?? 'audio/wav';
       }
     } else {
-      const body = request.body as { name?: string; emoji?: string } | null;
+      const body = request.body as { name?: string; emoji?: string; folder?: string | null } | null;
       if (body?.name !== undefined) {
         const trimmed = body.name.trim();
         if (!trimmed || trimmed.length > MAX_SOUNDBOARD_NAME) return sendError(reply, 400, 'validation_failed');
@@ -313,6 +324,10 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       }
       if (body?.emoji !== undefined && body.emoji.trim()) {
         updates.emoji = body.emoji.trim().slice(0, MAX_SOUNDBOARD_EMOJI);
+      }
+      if (body?.folder !== undefined) {
+        const trimmed = typeof body.folder === 'string' ? body.folder.trim().slice(0, MAX_SOUNDBOARD_FOLDER) : '';
+        updates.folder = trimmed.length > 0 ? trimmed : null;
       }
     }
 

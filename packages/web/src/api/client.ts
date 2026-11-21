@@ -453,7 +453,7 @@ export class BackspaceApiClient {
   readonly soundboard: {
     list: (params?: { spaceId?: string; dmChannelId?: string }) => Promise<SoundboardListResponse>;
     create: (formData: FormData) => Promise<SoundboardSound>;
-    update: (id: string, data: FormData | { name?: string; emoji?: string }) => Promise<SoundboardSound>;
+    update: (id: string, data: FormData | { name?: string; emoji?: string; folder?: string | null }) => Promise<SoundboardSound>;
     reorder: (scopeType: SoundboardScopeType, scopeId: string | null, orderedIds: string[]) => Promise<{ success: boolean }>;
     remove: (id: string) => Promise<{ success: boolean }>;
   };

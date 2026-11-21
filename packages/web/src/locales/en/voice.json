@@ -319,6 +319,11 @@
     "deletedToast": "Sound deleted.",
     "saveFailed": "Could not save sound.",
     "deleteFailed": "Could not delete sound.",
-    "reorderFailed": "Could not reorder sounds."
+    "reorderFailed": "Could not reorder sounds.",
+    "folderLabel": "Folder (optional)",
+    "folderPlaceholder": "Memes, Reactions, Games…",
+    "noFolder": "No folder",
+    "searchPlaceholder": "Search sounds or folders…",
+    "addToFolder": "Add sound to {{folder}}"
   }
 }

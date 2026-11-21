@@ -4,6 +4,7 @@ CREATE TABLE `soundboard_sounds` (
 	`scope_id` text NOT NULL,
 	`name` text NOT NULL,
 	`emoji` text DEFAULT '🔊' NOT NULL,
+	`folder` text,
 	`file_name` text NOT NULL,
 	`mime_type` text NOT NULL,
 	`duration_ms` integer DEFAULT 0 NOT NULL,
