@@ -136,10 +136,18 @@ export function AudioPanel() {
                   step={8}
                   value={Math.min(draft.defaultAudioBitrateKbps ?? 64, draft.maxAudioBitrateKbps ?? 512)}
                   onChange={(e) => setDraft({ ...draft, defaultAudioBitrateKbps: Number(e.target.value) })}
-                  className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base
                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
                     [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
                     [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+                  style={{
+                    background: (() => {
+                      const maxVal = draft.maxAudioBitrateKbps ?? 512;
+                      const val = Math.min(draft.defaultAudioBitrateKbps ?? 64, maxVal);
+                      const pct = maxVal > 8 ? ((val - 8) / (maxVal - 8)) * 100 : 100;
+                      return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+                    })(),
+                  }}
                 />
               </div>
 
@@ -162,10 +170,17 @@ export function AudioPanel() {
                     const nextDefault = Math.min(draft.defaultAudioBitrateKbps ?? 64, nextMax);
                     setDraft({ ...draft, maxAudioBitrateKbps: nextMax, defaultAudioBitrateKbps: nextDefault });
                   }}
-                  className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base
                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
                     [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
                     [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+                  style={{
+                    background: (() => {
+                      const val = draft.maxAudioBitrateKbps ?? 512;
+                      const pct = ((val - 8) / (512 - 8)) * 100;
+                      return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+                    })(),
+                  }}
                 />
               </div>
             </div>
