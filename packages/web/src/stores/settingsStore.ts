@@ -60,6 +60,10 @@ export const DEFAULT_STREAMING_LIMITS: InstanceStreamingLimits = {
   directoryConfigured: false,
   bitrateMatrixOverrides: null,
   allowCustomBitrate: true,
+  defaultAudioBitrateKbps: 64,
+  maxAudioBitrateKbps: 512,
+  allowMusicMode: true,
+  allowStereoAudio: true,
 };
 
 /**

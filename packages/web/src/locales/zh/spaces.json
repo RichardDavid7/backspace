@@ -67,7 +67,20 @@
         "note": "没有显式访问权限的成员将无法看到此频道。拥有管理员权限的用户或空间拥有者始终可以查看所有频道。",
         "unhideOnSave": "保存后，所有成员都将看到此频道。"
       },
-      "deleteButton": "删除频道"
+      "deleteButton": "删除频道",
+      "voiceAudio": {
+        "sectionTitle": "语音音频 (Opus)",
+        "autoBitrate": {
+          "label": "使用实例默认比特率",
+          "description": "当前为 {{kbps}} kbps。关闭后可为此语音频道单独设置比特率。"
+        },
+        "bitrateLabel": "频道比特率",
+        "allowMusicMode": {
+          "label": "允许 Opus 音乐模式",
+          "description": "允许此频道中的参与者使用音乐模式。",
+          "disabledByInstance": "实例设置已禁用音乐模式。"
+        }
+      }
     },
     "delete": {
       "title": "删除 #{{name}}？",

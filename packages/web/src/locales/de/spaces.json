@@ -67,7 +67,20 @@
         "note": "Dieser Kanal ist für Mitglieder ohne ausdrücklichen Zugriff verborgen. Wer die Administrator-Berechtigung hat oder den Space besitzt, sieht immer alle Kanäle.",
         "unhideOnSave": "Beim Speichern wird dieser Kanal für alle Mitglieder sichtbar."
       },
-      "deleteButton": "Kanal löschen"
+      "deleteButton": "Kanal löschen",
+      "voiceAudio": {
+        "sectionTitle": "Sprachaudio (Opus)",
+        "autoBitrate": {
+          "label": "Instanz-Standard-Bitrate verwenden",
+          "description": "Aktuell {{kbps}} kbps. Deaktivieren, um eine eigene Bitrate für diesen Kanal festzulegen."
+        },
+        "bitrateLabel": "Kanal-Bitrate",
+        "allowMusicMode": {
+          "label": "Opus-Musikmodus erlauben",
+          "description": "Erlaubt Teilnehmern in diesem Kanal den Musikmodus zu nutzen.",
+          "disabledByInstance": "Der Musikmodus ist auf Instanzebene deaktiviert."
+        }
+      }
     },
     "delete": {
       "title": "#{{name}} löschen?",

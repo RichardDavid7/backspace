@@ -168,7 +168,9 @@ export interface VoiceState {
   setAudioMode: (mode: AudioMode) => void;
   audioStereo: boolean;                      // false (default) = mono; true = stereo capture + Opus forceStereo
   setAudioStereo: (stereo: boolean) => void;
-  audioBitrate: number;                      // 8–512 kbps (64 default)
+  audioBitrateAuto: boolean;                 // true (default) = follow channel bitrate or instance default
+  setAudioBitrateAuto: (auto: boolean) => void;
+  audioBitrate: number;                      // 8–512 kbps manual override (64 default)
   setAudioBitrate: (kbps: number) => void;
   streamAttenuationEnabled: boolean;        // global toggle, default true
   streamAttenuationStrength: number;        // 0-100, default 50
@@ -356,6 +358,8 @@ export const useVoiceStore = create<VoiceState>()(
       setAudioMode: (mode) => set({ audioMode: mode }),
       audioStereo: false,
       setAudioStereo: (stereo) => set({ audioStereo: stereo }),
+      audioBitrateAuto: true,
+      setAudioBitrateAuto: (auto) => set({ audioBitrateAuto: auto }),
       audioBitrate: DEFAULT_AUDIO_BITRATE_KBPS,
       setAudioBitrate: (kbps) => {
         const clamped = Math.min(MAX_AUDIO_BITRATE_KBPS, Math.max(MIN_AUDIO_BITRATE_KBPS, Math.round(kbps)));
@@ -980,6 +984,7 @@ export const useVoiceStore = create<VoiceState>()(
         hideNonVideoParticipants: state.hideNonVideoParticipants,
         audioMode: state.audioMode,
         audioStereo: state.audioStereo,
+        audioBitrateAuto: state.audioBitrateAuto,
         audioBitrate: state.audioBitrate,
         streamAttenuationEnabled: state.streamAttenuationEnabled,
         streamAttenuationStrength: state.streamAttenuationStrength,

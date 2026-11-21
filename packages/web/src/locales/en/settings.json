@@ -108,18 +108,23 @@
         "label": "Audio Mode",
         "description": "Voice optimizes for speech with silence suppression (DTX). Music disables speech processing and DTX for full-range studio fidelity.",
         "voice": "Voice",
-        "music": "Music"
+        "music": "Music",
+        "musicDisabledByPolicy": "Music mode is disabled by this instance or voice channel."
       },
       "stereo": {
         "label": "Stereo Audio",
-        "description": "Captures and transmits true 2-channel stereo audio. Bypasses mono AI noise suppression while enabled."
+        "description": "Captures and transmits true 2-channel stereo audio. Bypasses mono AI noise suppression while enabled.",
+        "disabledByInstance": "Stereo audio is disabled by the instance administrator."
       },
       "bitrate": {
         "label": "Bitrate",
         "hintDefault": "64 kbps is the standard voice bitrate. Drag to balance clarity and bandwidth.",
         "warningLow": "Very low bitrate may noticeably reduce voice clarity.",
         "warningHigh": "Higher bitrates use more bandwidth and may affect users on slower connections.",
-        "warningVeryHigh": "Very high studio bitrate — uses significant bandwidth; best suited for music or dedicated audio interfaces on fast connections."
+        "warningVeryHigh": "Very high studio bitrate — uses significant bandwidth; best suited for music or dedicated audio interfaces on fast connections.",
+        "autoLabel": "Automatic Bitrate",
+        "autoDescription": "Follows the voice channel bitrate (or the instance default).",
+        "autoBadge": "Auto"
       },
       "bypassNoticeMusic": "Voice processing options below are bypassed while Music mode is active.",
       "bypassNoticeStereo": "AI Noise Suppression (RNNoise) is mono-only and is bypassed while Stereo Audio is enabled."
