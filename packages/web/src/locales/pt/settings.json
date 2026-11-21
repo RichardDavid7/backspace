@@ -102,6 +102,28 @@
         "description": "Enquanto você estiver em um canal de voz ou chamada e olhar para outra coisa, uma pequena janela mantém a chamada à vista."
       }
     },
+    "opus": {
+      "sectionTitle": "Qualidade de áudio (Opus)",
+      "mode": {
+        "label": "Modo de áudio",
+        "description": "Voz otimiza para fala com supressão de silêncio (DTX). Música desativa o processamento de fala e o DTX para fidelidade total de estúdio.",
+        "voice": "Voz",
+        "music": "Música"
+      },
+      "stereo": {
+        "label": "Áudio estéreo",
+        "description": "Captura e transmite áudio estéreo real em 2 canais. Ignora a supressão de ruído com IA (mono) enquanto estiver ativado."
+      },
+      "bitrate": {
+        "label": "Bitrate",
+        "hintDefault": "64 kbps é o padrão de voz. Arraste para equilibrar nitidez e uso de banda.",
+        "warningLow": "Bitrate muito baixo pode reduzir visivelmente a nitidez da voz.",
+        "warningHigh": "Bitrates acima de 96 kbps consomem mais banda e podem afetar conexões mais lentas.",
+        "warningVeryHigh": "Bitrate de estúdio muito alto — consome bastante banda; indicado para música ou interfaces de áudio dedicadas em conexões rápidas."
+      },
+      "bypassNoticeMusic": "As opções de processamento de voz abaixo ficam ignoradas enquanto o modo Música estiver ativo.",
+      "bypassNoticeStereo": "A supressão de ruído com IA (RNNoise) é apenas mono e fica ignorada enquanto o Áudio estéreo estiver ativado."
+    },
     "processing": {
       "sectionTitle": "Processamento de voz",
       "noiseSuppression": {

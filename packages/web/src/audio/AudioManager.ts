@@ -24,6 +24,7 @@ export class AudioManager {
   private voiceEchoCancellation = true;
   private voiceNoiseSuppression = true;
   private voiceAutoGainControl = true;
+  private voiceStereo = false;
   private streamGeneration = 0;
   // Separate from streamGeneration: only leaving capture invalidates pending work.
   private inputReleaseGeneration = 0;
@@ -277,6 +278,7 @@ export class AudioManager {
       const constraints = {
         audio: {
           deviceId: deviceId === 'default' ? undefined : { exact: deviceId },
+          ...(this.voiceStereo ? { channelCount: { ideal: 2 } } : {}),
           echoCancellation: this.voiceEchoCancellation,
           noiseSuppression: effectiveNoiseSuppression,
           autoGainControl: this.voiceAutoGainControl,
@@ -503,7 +505,7 @@ export class AudioManager {
     }
   }
 
-  setVoiceProcessing(opts: { echoCancellation?: boolean; noiseSuppression?: boolean; autoGainControl?: boolean }) {
+  setVoiceProcessing(opts: { echoCancellation?: boolean; noiseSuppression?: boolean; autoGainControl?: boolean; stereo?: boolean }) {
     let changed = false;
     if (opts.echoCancellation !== undefined && opts.echoCancellation !== this.voiceEchoCancellation) {
       this.voiceEchoCancellation = opts.echoCancellation;
@@ -515,6 +517,10 @@ export class AudioManager {
     }
     if (opts.autoGainControl !== undefined && opts.autoGainControl !== this.voiceAutoGainControl) {
       this.voiceAutoGainControl = opts.autoGainControl;
+      changed = true;
+    }
+    if (opts.stereo !== undefined && opts.stereo !== this.voiceStereo) {
+      this.voiceStereo = opts.stereo;
       changed = true;
     }
     if (changed && this.currentStream) {
