@@ -68,6 +68,8 @@ function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
     topic: row.topic,
     position: row.position ?? 0,
     categoryId: row.categoryId ?? null,
+    audioBitrateKbps: row.audioBitrateKbps ?? null,
+    allowMusicMode: row.allowMusicMode === null || row.allowMusicMode === undefined ? null : row.allowMusicMode === 1,
     createdAt: row.createdAt,
   };
 }

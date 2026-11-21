@@ -67,7 +67,20 @@
         "note": "This channel is hidden from members without explicit access. Users with the Administrator permission or space owners can always see all channels.",
         "unhideOnSave": "Saving makes this channel visible to every member."
       },
-      "deleteButton": "Delete Channel"
+      "deleteButton": "Delete Channel",
+      "voiceAudio": {
+        "sectionTitle": "Voice Audio (Opus)",
+        "autoBitrate": {
+          "label": "Use instance default bitrate",
+          "description": "Currently {{kbps}} kbps. Turn off to set a custom bitrate for this voice channel."
+        },
+        "bitrateLabel": "Channel bitrate",
+        "allowMusicMode": {
+          "label": "Allow Opus Music mode",
+          "description": "Allows participants in this channel to use Music mode.",
+          "disabledByInstance": "Music mode is disabled at the instance level."
+        }
+      }
     },
     "delete": {
       "title": "Delete #{{name}}?",

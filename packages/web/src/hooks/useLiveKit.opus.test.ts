@@ -5,7 +5,7 @@ vi.mock('../audio/AudioManager', () => ({
   AudioManager: { getInstance: () => ({}) },
 }));
 
-import { buildAudioPublishOptions } from './useLiveKit';
+import { buildAudioPublishOptions, resolveEffectiveAudioConfig } from './useLiveKit';
 import {
   useVoiceStore,
   DEFAULT_AUDIO_BITRATE_KBPS,
@@ -79,5 +79,64 @@ describe('Opus audio publish options & store clamping', () => {
 
     useVoiceStore.getState().setAudioBitrate(96.4);
     expect(useVoiceStore.getState().audioBitrate).toBe(96);
+  });
+
+  it('resolves Automatic bitrate from channel bitrate or instance default, and caps manual to instance max', () => {
+    // Auto with channel override follows channel bitrate
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'voice',
+        audioStereo: false,
+        audioBitrateAuto: true,
+        audioBitrate: 32,
+        channelAudioBitrateKbps: 192,
+        instanceDefaultAudioBitrateKbps: 64,
+        instanceMaxAudioBitrateKbps: 256,
+      }).audioBitrate,
+    ).toBe(192);
+
+    // Auto without channel override follows instance default
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'voice',
+        audioStereo: false,
+        audioBitrateAuto: true,
+        audioBitrate: 32,
+        channelAudioBitrateKbps: null,
+        instanceDefaultAudioBitrateKbps: 96,
+        instanceMaxAudioBitrateKbps: 256,
+      }).audioBitrate,
+    ).toBe(96);
+
+    // Manual override is capped only at instance max
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'music',
+        audioStereo: true,
+        audioBitrateAuto: false,
+        audioBitrate: 384,
+        channelAudioBitrateKbps: 64,
+        instanceDefaultAudioBitrateKbps: 64,
+        instanceMaxAudioBitrateKbps: 256,
+      }).audioBitrate,
+    ).toBe(256);
+  });
+
+  it('enforces instance and channel Music/Stereo policies', () => {
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'music',
+        audioStereo: true,
+        audioBitrateAuto: true,
+        audioBitrate: 128,
+        channelAllowMusicMode: false,
+        instanceAllowMusicMode: true,
+        instanceAllowStereoAudio: false,
+      }),
+    ).toEqual({
+      audioMode: 'voice',
+      audioStereo: false,
+      audioBitrate: 64,
+    });
   });
 });

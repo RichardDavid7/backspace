@@ -353,6 +353,20 @@
     "capWarning": {
       "title": "Os valores da matriz excedem o limite global.",
       "description": "Alguns valores de taxa de bits excedem seu máximo de {{max}}. As transmissões nessas combinações terão a qualidade reduzida ao seu limite."
+    },
+    "voiceAudio": {
+      "label": "Áudio de voz (Opus)",
+      "description": "Define o bitrate padrão e máximo de voz (Opus), além de permitir modo Música e áudio estéreo na instância.",
+      "allowMusicMode": {
+        "label": "Permitir modo Música no Opus",
+        "description": "Permite que usuários e canais de voz alternem do modo Voz para o modo Música de alta fidelidade."
+      },
+      "allowStereoAudio": {
+        "label": "Permitir áudio estéreo",
+        "description": "Permite capturar e transmitir áudio Opus estéreo em 2 canais."
+      },
+      "defaultBitrate": "Bitrate padrão (Automático)",
+      "maxBitrate": "Bitrate máximo"
     }
   },
   "updates": {

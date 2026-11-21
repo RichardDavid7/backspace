@@ -310,6 +310,10 @@ export interface Channel {
   createdAt: number;
   lastMessageId?: string | null;
   myPermissions?: string; // Computed per-user BigInt decimal string
+  /** Optional per-voice-channel target Opus bitrate in kbps (`null` = instance default). */
+  audioBitrateKbps?: number | null;
+  /** Optional per-voice-channel Opus Music mode toggle (`null` = inherit from instance). */
+  allowMusicMode?: boolean | null;
 }
 
 export interface ReadState {
@@ -884,6 +888,10 @@ export interface UpdateChannelRequest {
   topic?: string | null;
   position?: number;
   categoryId?: string | null;
+  /** Voice channels: `null` resets to instance default. */
+  audioBitrateKbps?: number | null;
+  /** Voice channels: `null` inherits instance policy. */
+  allowMusicMode?: boolean | null;
 }
 
 export interface UpdateSpaceRequest {
@@ -1189,6 +1197,14 @@ export interface InstanceStreamingLimits {
   directoryConfigured: boolean;
   bitrateMatrixOverrides: Record<string, number> | null;
   allowCustomBitrate: boolean;
+  /** Default voice Opus bitrate in kbps when a channel/client uses Automatic (8–512, default 64). */
+  defaultAudioBitrateKbps?: number;
+  /** Maximum voice Opus bitrate in kbps permitted on this instance (8–512, default 512). */
+  maxAudioBitrateKbps?: number;
+  /** Whether Opus Music mode is permitted on this instance (default true). */
+  allowMusicMode?: boolean;
+  /** Whether Stereo Opus audio is permitted on this instance (default true). */
+  allowStereoAudio?: boolean;
 }
 
 // ─── Federation Types ──────────────────────────────────────────────────────

@@ -4,6 +4,8 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin } from '../../stores/spaceStore';
+import { useSettingsStore, selectStreamingLimits } from '../../stores/settingsStore';
+import { Toggle } from '../ui/Toggle';
 import { PermissionBits, hasPermissionBit, isHiddenFromEveryone } from '../../utils/permissions';
 import { InlineNameEditor } from '../ui/InlineNameEditor';
 import { PermissionsEditor } from '../ui/PermissionsEditor';
@@ -47,6 +49,11 @@ function OverviewTab({
   channelName,
   channelType,
   channelTopic,
+  channelAudioBitrateKbps,
+  channelAllowMusicMode,
+  instanceDefaultAudioBitrate,
+  instanceMaxAudioBitrate,
+  instanceAllowMusicMode,
   isPrivate,
   isFetching,
   isLoading,
@@ -57,11 +64,17 @@ function OverviewTab({
   onDeleteChannel,
   onRename,
   onSaveTopic,
+  onSaveAudioSettings,
 }: {
   channelId: string;
   channelName: string;
   channelType: string;
   channelTopic: string | null;
+  channelAudioBitrateKbps: number | null;
+  channelAllowMusicMode: boolean | null;
+  instanceDefaultAudioBitrate: number;
+  instanceMaxAudioBitrate: number;
+  instanceAllowMusicMode: boolean;
   isPrivate: boolean;
   isFetching: boolean;
   isLoading: boolean;
@@ -72,8 +85,21 @@ function OverviewTab({
   onDeleteChannel: () => void;
   onRename: (name: string) => Promise<void>;
   onSaveTopic: (topic: string | null) => Promise<void>;
+  onSaveAudioSettings: (patch: { audioBitrateKbps?: number | null; allowMusicMode?: boolean | null }) => Promise<void>;
 }) {
   const { t } = useTranslation(['spaces', 'common']);
+  const [bitrateDraft, setBitrateDraft] = useState<number>(
+    channelAudioBitrateKbps ?? instanceDefaultAudioBitrate,
+  );
+  useEffect(() => {
+    setBitrateDraft(channelAudioBitrateKbps ?? instanceDefaultAudioBitrate);
+  }, [channelAudioBitrateKbps, instanceDefaultAudioBitrate]);
+
+  const isAutoBitrate = channelAudioBitrateKbps === null;
+  const clampedDraft = Math.min(instanceMaxAudioBitrate, Math.max(8, bitrateDraft));
+  const sliderSpan = Math.max(1, instanceMaxAudioBitrate - 8);
+  const sliderPct = ((clampedDraft - 8) / sliderSpan) * 100;
+  const effectiveAllowMusic = instanceAllowMusicMode && (channelAllowMusicMode ?? true);
   return (
     <div className="space-y-4">
       <div>
@@ -100,6 +126,80 @@ function OverviewTab({
           they offer to edit one, the same as the create dialog. */}
       {channelType === 'text' && (
         <ChannelTopicEditor key={channelId} topic={channelTopic} canEdit={canManageChannels} onSave={onSaveTopic} />
+      )}
+
+      {/* Voice channels: per-channel Opus bitrate & Music mode toggle */}
+      {channelType === 'voice' && canManageChannels && (
+        <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
+          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">
+            {t('spaces:channel.settings.voiceAudio.sectionTitle')}
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-txt-primary">{t('spaces:channel.settings.voiceAudio.autoBitrate.label')}</div>
+              <div className="text-xs text-txt-tertiary">
+                {t('spaces:channel.settings.voiceAudio.autoBitrate.description', { kbps: instanceDefaultAudioBitrate })}
+              </div>
+            </div>
+            <Toggle
+              enabled={isAutoBitrate}
+              onChange={(auto) => {
+                void onSaveAudioSettings({
+                  audioBitrateKbps: auto ? null : clampedDraft,
+                });
+              }}
+              ariaLabel={t('spaces:channel.settings.voiceAudio.autoBitrate.label')}
+            />
+          </div>
+
+          {!isAutoBitrate && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-txt-secondary">{t('spaces:channel.settings.voiceAudio.bitrateLabel')}</span>
+                <span className="text-xs text-txt-primary font-medium tabular-nums">
+                  {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
+                  {clampedDraft} kbps
+                </span>
+              </div>
+              <input
+                type="range"
+                min={8}
+                max={instanceMaxAudioBitrate}
+                step={8}
+                value={clampedDraft}
+                onChange={(e) => setBitrateDraft(Number(e.target.value))}
+                onMouseUp={() => { void onSaveAudioSettings({ audioBitrateKbps: clampedDraft }); }}
+                onTouchEnd={() => { void onSaveAudioSettings({ audioBitrateKbps: clampedDraft }); }}
+                onKeyUp={() => { void onSaveAudioSettings({ audioBitrateKbps: clampedDraft }); }}
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
+                style={{
+                  background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${sliderPct}%, rgb(var(--interactive-muted)) ${sliderPct}%, rgb(var(--interactive-muted)) 100%)`,
+                }}
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-txt-primary">{t('spaces:channel.settings.voiceAudio.allowMusicMode.label')}</div>
+              <div className="text-xs text-txt-tertiary">
+                {instanceAllowMusicMode
+                  ? t('spaces:channel.settings.voiceAudio.allowMusicMode.description')
+                  : t('spaces:channel.settings.voiceAudio.allowMusicMode.disabledByInstance')}
+              </div>
+            </div>
+            <Toggle
+              enabled={effectiveAllowMusic}
+              disabled={!instanceAllowMusicMode}
+              onChange={(enabled) => {
+                if (!instanceAllowMusicMode) return;
+                void onSaveAudioSettings({ allowMusicMode: enabled });
+              }}
+              ariaLabel={t('spaces:channel.settings.voiceAudio.allowMusicMode.label')}
+            />
+          </div>
+        </div>
       )}
 
       {error && (
@@ -148,6 +248,8 @@ export function ChannelSettingsModal() {
   const spaces = useSpaceStore((s) => s.spaces);
   const spacePermissions = useSpaceStore((s) => s.spacePermissions);
   const channelPermissions = useSpaceStore((s) => s.channelPermissions);
+  const spaceOriginForLimits = spaces.find((s) => s.id === currentSpaceId)?._instanceOrigin ?? '';
+  const instanceLimits = useSettingsStore((s) => selectStreamingLimits(s, spaceOriginForLimits) ?? s.streamingLimits);
 
   const [tab, setTab] = useState<'overview' | 'permissions'>('overview');
   const [isLoading, setIsLoading] = useState(false);
@@ -232,6 +334,22 @@ export function ChannelSettingsModal() {
     }
   };
 
+  const instanceMaxAudioBitrate = instanceLimits?.maxAudioBitrateKbps ?? 512;
+  const instanceDefaultAudioBitrate = Math.min(instanceLimits?.defaultAudioBitrateKbps ?? 64, instanceMaxAudioBitrate);
+  const instanceAllowMusicMode = instanceLimits?.allowMusicMode ?? true;
+
+  const handleSaveAudioSettings = async (patch: {
+    audioBitrateKbps?: number | null;
+    allowMusicMode?: boolean | null;
+  }): Promise<void> => {
+    setError('');
+    try {
+      await useSpaceStore.getState().updateChannel(channelId, patch);
+    } catch (err) {
+      setError(describeError(err));
+    }
+  };
+
   const showTabs = canManageRoles;
 
   const tabClass = (target: typeof tab) =>
@@ -264,6 +382,11 @@ export function ChannelSettingsModal() {
                   channelName={channel.name}
                   channelType={channel.type}
                   channelTopic={channel.topic}
+                  channelAudioBitrateKbps={channel.audioBitrateKbps ?? null}
+                  channelAllowMusicMode={channel.allowMusicMode ?? null}
+                  instanceDefaultAudioBitrate={instanceDefaultAudioBitrate}
+                  instanceMaxAudioBitrate={instanceMaxAudioBitrate}
+                  instanceAllowMusicMode={instanceAllowMusicMode}
                   isPrivate={isPrivate}
                   isFetching={isFetching}
                   isLoading={isLoading}
@@ -274,6 +397,7 @@ export function ChannelSettingsModal() {
                   onDeleteChannel={() => setShowDeleteConfirm(true)}
                   onRename={handleRenameChannel}
                   onSaveTopic={handleSaveTopic}
+                  onSaveAudioSettings={handleSaveAudioSettings}
                 />
               )}
               {tab === 'permissions' && (
@@ -297,6 +421,11 @@ export function ChannelSettingsModal() {
             channelName={channel.name}
             channelType={channel.type}
             channelTopic={channel.topic}
+            channelAudioBitrateKbps={channel.audioBitrateKbps ?? null}
+            channelAllowMusicMode={channel.allowMusicMode ?? null}
+            instanceDefaultAudioBitrate={instanceDefaultAudioBitrate}
+            instanceMaxAudioBitrate={instanceMaxAudioBitrate}
+            instanceAllowMusicMode={instanceAllowMusicMode}
             isPrivate={isPrivate}
             isFetching={isFetching}
             isLoading={isLoading}
@@ -307,6 +436,7 @@ export function ChannelSettingsModal() {
             onDeleteChannel={() => setShowDeleteConfirm(true)}
             onRename={handleRenameChannel}
             onSaveTopic={handleSaveTopic}
+            onSaveAudioSettings={handleSaveAudioSettings}
           />
         )}
       </Modal>
