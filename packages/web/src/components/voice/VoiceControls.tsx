@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { ConnectionInfoPopover } from './ConnectionInfoPopover';
+import { SoundboardPopover } from './SoundboardPopover';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { handleCameraAction, handleDisconnectAction, handleScreenShareAction, reconnectVoice } from '../../utils/voiceActions';
 
@@ -26,8 +28,13 @@ export function VoiceControls() {
   // Screen-share button: idle → source picker; live → settings + stop menu.
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showConnectionInfo, setShowConnectionInfo] = useState(false);
+  const [showSoundboard, setShowSoundboard] = useState(false);
+  const [soundboardAnchor, setSoundboardAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const soundboardMuted = useVoiceStore((s) => s.soundboardMuted);
   const connectionBtnRef = useRef<HTMLButtonElement>(null);
   const shareBtnRef = useRef<HTMLButtonElement>(null);
+  const soundboardBtnRef = useRef<HTMLButtonElement>(null);
+  const soundboardPopoverRef = useRef<HTMLDivElement>(null);
 
   const activeDmCall = useVoiceStore((s) => s.activeDmCall);
   const channelPerms = useSpaceStore((s) => currentVoiceChannelId ? s.channelPermissions.get(currentVoiceChannelId) : undefined);
@@ -42,6 +49,40 @@ export function VoiceControls() {
   useEffect(() => {
     if (!isScreenSharing) setShowShareMenu(false);
   }, [isScreenSharing]);
+
+  useEffect(() => {
+    if (!showSoundboard) {
+      setSoundboardAnchor(null);
+      return;
+    }
+    const updateAnchor = () => {
+      const btn = soundboardBtnRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      setSoundboardAnchor({
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - 336)),
+        bottom: window.innerHeight - rect.top + 8,
+      });
+    };
+    updateAnchor();
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (soundboardBtnRef.current?.contains(target)) return;
+      if (soundboardPopoverRef.current?.contains(target)) return;
+      setShowSoundboard(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowSoundboard(false);
+    };
+    window.addEventListener('resize', updateAnchor);
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('resize', updateAnchor);
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showSoundboard]);
 
   if (!currentVoiceChannelId && !activeDmCall) return null;
 
@@ -144,6 +185,33 @@ export function VoiceControls() {
             </button>
           )}
           <button
+            ref={soundboardBtnRef}
+            onClick={() => {
+              setShowSoundboard((open) => {
+                const next = !open;
+                if (next) {
+                  setShowConnectionInfo(false);
+                  setShowShareMenu(false);
+                }
+                return next;
+              });
+            }}
+            className={`w-7 h-7 flex items-center justify-center transition-colors rounded ${
+              showSoundboard
+                ? 'bg-accent-sky/20 text-accent-sky'
+                : soundboardMuted
+                  ? 'text-txt-tertiary/60 hover:text-txt-primary'
+                  : 'text-txt-tertiary hover:text-txt-primary'
+            }`}
+            title={t('voice:soundboard.title')}
+            aria-haspopup="dialog"
+            aria-expanded={showSoundboard}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+            </svg>
+          </button>
+          <button
             onClick={handleDisconnect}
             className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded"
             title={t('voice:controls.disconnect')}
@@ -160,6 +228,21 @@ export function VoiceControls() {
           onClose={() => setShowConnectionInfo(false)}
           anchorRef={connectionBtnRef}
         />
+
+        {/* Soundboard Popover (portaled above the sidebar) */}
+        {showSoundboard && soundboardAnchor && createPortal(
+          <div
+            ref={soundboardPopoverRef}
+            className="fixed z-40"
+            style={{ left: soundboardAnchor.left, bottom: soundboardAnchor.bottom }}
+          >
+            <SoundboardPopover
+              isOpen={showSoundboard}
+              onClose={() => setShowSoundboard(false)}
+            />
+          </div>,
+          document.body,
+        )}
       </div>
 
       {/* Row 2: Camera, Screen Share, Noise Suppression */}
