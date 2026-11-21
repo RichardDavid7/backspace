@@ -128,15 +128,15 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
             key={sound.id}
             type="button"
             onClick={() => void handlePlay(sound)}
-            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-all cursor-pointer ${
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors cursor-pointer ${
               isPlaying
-                ? 'bg-accent-sky/20 border-accent-sky/70 shadow-sm shadow-accent-sky/20'
-                : 'bg-surface-900/55 border-surface-700/50 hover:bg-surface-800/75 hover:border-surface-600/80'
+                ? 'bg-accent-primary/20 border-accent-primary/60 text-txt-primary'
+                : 'bg-surface-channel border-white/[0.06] hover:bg-interactive-hover hover:border-white/10 text-txt-primary'
             }`}
             title={sound.name}
           >
             <span className="text-base shrink-0 leading-none">{sound.emoji}</span>
-            <span className="text-xs font-medium text-text-primary truncate flex-1">
+            <span className="text-xs font-medium text-txt-primary truncate flex-1">
               {sound.name}
             </span>
           </button>
@@ -168,12 +168,12 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
 
     return (
       <div className="space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-txt-tertiary">
           {title}
         </div>
 
         {filtered.length === 0 ? (
-          <div className="text-xs text-text-muted py-3 px-2 text-center rounded-xl bg-surface-900/40 border border-surface-700/40">
+          <div className="text-xs text-txt-tertiary py-3 px-2 text-center rounded-lg bg-white/[0.02] border border-white/[0.05]">
             {t('soundboard.emptyScope')}
           </div>
         ) : (
@@ -186,12 +186,12 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
               return (
                 <div
                   key={folderKey}
-                  className="rounded-xl bg-surface-900/35 border border-surface-700/45 p-2 space-y-2"
+                  className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-2 space-y-2"
                 >
                   <button
                     type="button"
                     onClick={() => toggleFolder(folderKey)}
-                    className="w-full flex items-center gap-1.5 text-left text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-1.5 text-left text-xs font-medium text-txt-secondary hover:text-txt-primary transition-colors cursor-pointer"
                   >
                     <svg
                       className={`w-3.5 h-3.5 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
@@ -203,11 +203,11 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
                     </svg>
-                    <svg className="w-3.5 h-3.5 shrink-0 text-accent-sky/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <svg className="w-3.5 h-3.5 shrink-0 text-accent-primary/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                     </svg>
                     <span className="truncate flex-1">{folderName}</span>
-                    <span className="text-[10px] text-text-muted shrink-0">
+                    <span className="text-[10px] text-txt-tertiary shrink-0">
                       {folderSounds.length}
                     </span>
                   </button>
@@ -224,21 +224,21 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
 
   return (
     <div
-      className={`glass w-80 max-w-[calc(100vw-2rem)] rounded-2xl p-3.5 text-text-primary shadow-2xl border border-surface-700/60 space-y-3 ${className}`}
+      className={`glass-bubble w-80 max-w-[calc(100vw-2rem)] rounded-xl p-3.5 text-txt-primary shadow-2xl border border-border-soft space-y-3 ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-accent-sky" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg className="w-4 h-4 text-accent-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
           </svg>
-          <span className="text-sm font-semibold">{t('soundboard.title')}</span>
+          <span className="text-sm font-semibold text-txt-primary">{t('soundboard.title')}</span>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-700/50 transition-colors cursor-pointer"
+          className="p-1 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
           aria-label={t('soundboard.close')}
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -248,14 +248,14 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       </div>
 
       {/* Volume & Global Mute Bar */}
-      <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-surface-900/55 border border-surface-700/40">
+      <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
         <button
           type="button"
           onClick={() => setSoundboardMuted(!soundboardMuted)}
-          className={`p-1 rounded-lg transition-colors cursor-pointer ${
+          className={`p-1 rounded-md transition-colors cursor-pointer ${
             soundboardMuted
-              ? 'text-accent-rose bg-accent-rose/15'
-              : 'text-text-secondary hover:text-text-primary hover:bg-surface-700/50'
+              ? 'text-txt-danger bg-accent-rose/15'
+              : 'text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover'
           }`}
           aria-label={soundboardMuted ? t('soundboard.unmuteAll') : t('soundboard.muteAll')}
           title={soundboardMuted ? t('soundboard.unmuteAll') : t('soundboard.muteAll')}
@@ -282,9 +282,12 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
             setSoundboardVolume(val);
           }}
           aria-label={t('soundboard.volumeLabel')}
-          className="flex-1 accent-accent-sky cursor-pointer"
+          className="flex-1 h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
+            [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
         />
-        <span className="text-[11px] font-mono text-text-muted w-9 text-right">
+        <span className="text-[11px] font-mono tabular-nums text-txt-tertiary w-9 text-right">
           {t('soundboard.volumePercent', { value: soundboardMuted ? 0 : soundboardVolume })}
         </span>
       </div>
@@ -296,14 +299,14 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={t('soundboard.searchPlaceholder')}
-          className="w-full h-8 px-2.5 rounded-lg bg-surface-900/60 border border-surface-700/50 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-sky"
+          className="input-standard w-full h-8 px-2.5 text-xs"
         />
       )}
 
       {/* Sound Sections */}
-      <div className="max-h-80 overflow-y-auto pr-0.5 space-y-4">
+      <div className="max-h-80 overflow-y-auto scrollbar-thin pr-0.5 space-y-4">
         {loading && instanceSounds.length === 0 && scopeSounds.length === 0 ? (
-          <div className="py-6 text-center text-xs text-text-muted">
+          <div className="py-6 text-center text-xs text-txt-tertiary">
             {t('soundboard.loading')}
           </div>
         ) : (

@@ -175,7 +175,7 @@ export function VoiceControls() {
           </div>
         </div>
 
-        <div className="flex items-center gap-0.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {voiceConnectionStatus === 'disconnected' && connectionError && (
             <button
               onClick={handleRetry}
@@ -198,10 +198,10 @@ export function VoiceControls() {
             }}
             className={`w-7 h-7 flex items-center justify-center transition-colors rounded ${
               showSoundboard
-                ? 'bg-accent-sky/20 text-accent-sky'
+                ? 'bg-accent-primary/20 text-accent-primary'
                 : soundboardMuted
-                  ? 'text-txt-tertiary/60 hover:text-txt-primary'
-                  : 'text-txt-tertiary hover:text-txt-primary'
+                  ? 'text-txt-tertiary/60 hover:text-txt-primary hover:bg-interactive-hover'
+                  : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover'
             }`}
             title={t('voice:soundboard.title')}
             aria-haspopup="dialog"
@@ -213,7 +213,7 @@ export function VoiceControls() {
           </button>
           <button
             onClick={handleDisconnect}
-            className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded"
+            className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors rounded"
             title={t('voice:controls.disconnect')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
