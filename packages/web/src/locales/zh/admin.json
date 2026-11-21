@@ -325,6 +325,20 @@
     "capWarning": {
       "title": "矩阵中的部分数值超过了全局上限。",
       "description": "部分码率设置超出了您配置的最大上限 {{max}}。在这些组合下推流的画质将被降级限制在您的上限之内。"
+    },
+    "voiceAudio": {
+      "label": "语音音频 (Opus)",
+      "description": "控制此实例的默认与最高 Opus 语音比特率，以及是否允许音乐模式和立体声。",
+      "allowMusicMode": {
+        "label": "允许 Opus 音乐模式",
+        "description": "允许用户和语音频道从语音模式切换至高保真音乐模式。"
+      },
+      "allowStereoAudio": {
+        "label": "允许立体声音频",
+        "description": "允许用户采集并传输双声道立体声 Opus 音频。"
+      },
+      "defaultBitrate": "默认比特率（自动）",
+      "maxBitrate": "最高比特率"
     }
   },
   "updates": {

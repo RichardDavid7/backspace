@@ -339,6 +339,20 @@
     "capWarning": {
       "title": "Matrix values exceed global cap.",
       "description": "Some bitrate values exceed your maximum of {{max}}. Streams at those combos will be quality-degraded to your cap."
+    },
+    "voiceAudio": {
+      "label": "Voice Audio (Opus)",
+      "description": "Control default and maximum Opus voice bitrate, Music mode, and Stereo audio across this instance.",
+      "allowMusicMode": {
+        "label": "Allow Opus Music mode",
+        "description": "Lets users and voice channels switch from Voice to full-fidelity Music mode."
+      },
+      "allowStereoAudio": {
+        "label": "Allow Stereo audio",
+        "description": "Lets users capture and transmit 2-channel stereo Opus audio."
+      },
+      "defaultBitrate": "Default bitrate (Auto)",
+      "maxBitrate": "Maximum bitrate"
     }
   },
   "updates": {

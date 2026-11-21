@@ -545,6 +545,90 @@ export function StreamingPanel() {
         </div>
       )}
 
+      {/* Voice Audio (Opus) */}
+      <div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
+          {t('admin:streaming.voiceAudio.label')}
+        </div>
+        <p className="text-xs text-txt-tertiary mb-2">{t('admin:streaming.voiceAudio.description')}</p>
+        <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-4">
+          {/* Allow Music Mode */}
+          <div className="flex items-center justify-between">
+            <div className="pr-4">
+              <div className="text-sm text-txt-primary">{t('admin:streaming.voiceAudio.allowMusicMode.label')}</div>
+              <div className="text-xs text-txt-tertiary">{t('admin:streaming.voiceAudio.allowMusicMode.description')}</div>
+            </div>
+            <Toggle
+              enabled={draft.allowMusicMode ?? true}
+              onChange={(enabled) => setDraft({ ...draft, allowMusicMode: enabled })}
+            />
+          </div>
+
+          {/* Allow Stereo Audio */}
+          <div className="flex items-center justify-between">
+            <div className="pr-4">
+              <div className="text-sm text-txt-primary">{t('admin:streaming.voiceAudio.allowStereoAudio.label')}</div>
+              <div className="text-xs text-txt-tertiary">{t('admin:streaming.voiceAudio.allowStereoAudio.description')}</div>
+            </div>
+            <Toggle
+              enabled={draft.allowStereoAudio ?? true}
+              onChange={(enabled) => setDraft({ ...draft, allowStereoAudio: enabled })}
+            />
+          </div>
+
+          {/* Default & Max Voice Audio Bitrate */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-txt-secondary">{t('admin:streaming.voiceAudio.defaultBitrate')}</label>
+                <span className="text-xs text-txt-primary font-medium tabular-nums">
+                  {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
+                  {draft.defaultAudioBitrateKbps ?? 64} kbps
+                </span>
+              </div>
+              <input
+                type="range"
+                min={8}
+                max={draft.maxAudioBitrateKbps ?? 512}
+                step={8}
+                value={Math.min(draft.defaultAudioBitrateKbps ?? 64, draft.maxAudioBitrateKbps ?? 512)}
+                onChange={(e) => setDraft({ ...draft, defaultAudioBitrateKbps: Number(e.target.value) })}
+                className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
+                  [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-txt-secondary">{t('admin:streaming.voiceAudio.maxBitrate')}</label>
+                <span className="text-xs text-txt-primary font-medium tabular-nums">
+                  {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
+                  {draft.maxAudioBitrateKbps ?? 512} kbps
+                </span>
+              </div>
+              <input
+                type="range"
+                min={8}
+                max={512}
+                step={8}
+                value={draft.maxAudioBitrateKbps ?? 512}
+                onChange={(e) => {
+                  const nextMax = Number(e.target.value);
+                  const nextDefault = Math.min(draft.defaultAudioBitrateKbps ?? 64, nextMax);
+                  setDraft({ ...draft, maxAudioBitrateKbps: nextMax, defaultAudioBitrateKbps: nextDefault });
+                }}
+                className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
+                  [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Save / Reset */}
       {saveError && (
         <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{saveError}</div>

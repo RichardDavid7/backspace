@@ -108,18 +108,23 @@
         "label": "Audiomodus",
         "description": "Sprache optimiert für Stimmen mit DTX. Musik deaktiviert Sprachverarbeitung und DTX für volle Studioqualität.",
         "voice": "Sprache",
-        "music": "Musik"
+        "music": "Musik",
+        "musicDisabledByPolicy": "Der Musikmodus ist auf dieser Instanz oder in diesem Sprachkanal deaktiviert."
       },
       "stereo": {
         "label": "Stereo-Audio",
-        "description": "Erfasst und überträgt echtes 2-Kanal-Stereo. Umgeht die Mono-KI-Rauschunterdrückung, solange aktiv."
+        "description": "Erfasst und überträgt echtes 2-Kanal-Stereo. Umgeht die Mono-KI-Rauschunterdrückung, solange aktiv.",
+        "disabledByInstance": "Stereo-Audio wurde vom Instanz-Administrator deaktiviert."
       },
       "bitrate": {
         "label": "Bitrate",
         "hintDefault": "64 kbps ist der Standard für Sprache. Schiebe den Regler für Qualität vs. Bandbreite.",
         "warningLow": "Sehr niedrige Bitraten können die Sprachverständlichkeit deutlich verringern.",
         "warningHigh": "Höhere Bitraten verbrauchen mehr Bandbreite und können langsamere Verbindungen beeinträchtigen.",
-        "warningVeryHigh": "Sehr hohe Studio-Bitrate — hoher Bandbreitenbedarf; ideal für Musik oder Audio-Interfaces bei schneller Verbindung."
+        "warningVeryHigh": "Sehr hohe Studio-Bitrate — hoher Bandbreitenbedarf; ideal für Musik oder Audio-Interfaces bei schneller Verbindung.",
+        "autoLabel": "Automatische Bitrate",
+        "autoDescription": "Folgt der Bitrate des Sprachkanals (oder dem Instanz-Standard).",
+        "autoBadge": "Auto-Modus"
       },
       "bypassNoticeMusic": "Die Sprachverarbeitungs-Optionen unten sind im Musikmodus deaktiviert.",
       "bypassNoticeStereo": "KI-Rauschunterdrückung (RNNoise) ist nur Mono und wird bei aktiviertem Stereo-Audio umgangen."

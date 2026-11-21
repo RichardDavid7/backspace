@@ -19,6 +19,7 @@ import { homeIdentityOf } from '../utils/identity';
 import { refreshStreamHostLimits, useStreamHostLimits } from '../utils/streamHostLimits';
 import { wsSend } from './useWebSocket';
 import { useVoiceStore, type AudioMode, type VoiceConnectionQuality } from '../stores/voiceStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { myRowForOrigin } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import type { User } from '@backspace/shared';
@@ -264,9 +265,52 @@ export interface AudioPublishConfig {
   audioBitrate: number;
 }
 
+export interface EffectiveAudioInputs {
+  audioMode: AudioMode;
+  audioStereo: boolean;
+  audioBitrateAuto: boolean;
+  audioBitrate: number;
+  channelAudioBitrateKbps?: number | null;
+  channelAllowMusicMode?: boolean | null;
+  instanceDefaultAudioBitrateKbps?: number;
+  instanceMaxAudioBitrateKbps?: number;
+  instanceAllowMusicMode?: boolean;
+  instanceAllowStereoAudio?: boolean;
+}
+
+/**
+ * Resolves the effective Opus encoding settings for the current voice room:
+ * - Automatic bitrate follows the channel's configured bitrate, or the
+ *   instance's default bitrate when the channel has no override.
+ * - Manual bitrate is capped at the instance's maximum allowed audio bitrate.
+ * - Music mode is permitted only when both the instance and channel allow it.
+ * - Stereo is permitted only when the instance allows it.
+ */
+export function resolveEffectiveAudioConfig(input: EffectiveAudioInputs): AudioPublishConfig {
+  const instanceMax = Math.max(8, Math.min(512, input.instanceMaxAudioBitrateKbps ?? 512));
+  const instanceDefault = Math.max(8, Math.min(instanceMax, input.instanceDefaultAudioBitrateKbps ?? 64));
+  const channelTarget = input.channelAudioBitrateKbps != null
+    ? Math.max(8, Math.min(instanceMax, input.channelAudioBitrateKbps))
+    : instanceDefault;
+
+  const effectiveBitrate = input.audioBitrateAuto
+    ? channelTarget
+    : Math.max(8, Math.min(instanceMax, input.audioBitrate));
+
+  const musicAllowed = (input.instanceAllowMusicMode ?? true) && (input.channelAllowMusicMode ?? true);
+  const effectiveMode: AudioMode = input.audioMode === 'music' && musicAllowed ? 'music' : 'voice';
+  const effectiveStereo = input.audioStereo && (input.instanceAllowStereoAudio ?? true);
+
+  return {
+    audioMode: effectiveMode,
+    audioStereo: effectiveStereo,
+    audioBitrate: effectiveBitrate,
+  };
+}
+
 /**
  * Builds LiveKit `publishTrack` options for the microphone track from the
- * user's Opus audio settings:
+ * resolved Opus audio settings:
  * - `audioMode === 'voice'`: DTX enabled (bandwidth savings on silence), RED
  *   enabled when mono for packet-loss resilience.
  * - `audioMode === 'music'`: DTX and RED disabled so full bitrate goes to
@@ -286,6 +330,28 @@ export function buildAudioPublishOptions(cfg: AudioPublishConfig) {
   } as const;
 }
 
+function getEffectiveAudioConfigForCurrentRoom(): AudioPublishConfig {
+  const vs = useVoiceStore.getState();
+  const cvId = vs.currentVoiceChannelId;
+  const channel = cvId ? useSpaceStore.getState().channels.find((c) => c.id === cvId) : undefined;
+  const origin = cvId ? getChannelOrigin(cvId) : '';
+  const settingsState = useSettingsStore.getState();
+  const limits = (origin ? settingsState.streamingLimitsByOrigin[origin] : settingsState.streamingLimits)
+    ?? settingsState.streamingLimits;
+  return resolveEffectiveAudioConfig({
+    audioMode: vs.audioMode,
+    audioStereo: vs.audioStereo,
+    audioBitrateAuto: vs.audioBitrateAuto,
+    audioBitrate: vs.audioBitrate,
+    channelAudioBitrateKbps: channel?.audioBitrateKbps ?? null,
+    channelAllowMusicMode: channel?.allowMusicMode ?? null,
+    instanceDefaultAudioBitrateKbps: limits?.defaultAudioBitrateKbps,
+    instanceMaxAudioBitrateKbps: limits?.maxAudioBitrateKbps,
+    instanceAllowMusicMode: limits?.allowMusicMode,
+    instanceAllowStereoAudio: limits?.allowStereoAudio,
+  });
+}
+
 /**
  * Ensures a fresh microphone track from the AudioManager pipeline is published
  * to the supplied room. If the existing publication is already current (live
@@ -301,8 +367,8 @@ async function republishMicrophone(
 ): Promise<void> {
   const audioManager = AudioManager.getInstance();
   const currentGen = audioManager.getStreamGeneration();
-  const { audioMode, audioStereo, audioBitrate } = useVoiceStore.getState();
-  const publishSig = `${audioMode}:${audioStereo}:${audioBitrate}`;
+  const effective = getEffectiveAudioConfigForCurrentRoom();
+  const publishSig = `${effective.audioMode}:${effective.audioStereo}:${effective.audioBitrate}`;
 
   const micPub = r.localParticipant.getTrackPublications()
     .find(p => p.source === Track.Source.Microphone);
@@ -325,7 +391,7 @@ async function republishMicrophone(
   const audioTrack = audioManager.getFreshTrack();
   if (!audioTrack) return;
 
-  const publishOpts = buildAudioPublishOptions({ audioMode, audioStereo, audioBitrate });
+  const publishOpts = buildAudioPublishOptions(effective);
   console.log('[LiveKit] Publishing fresh microphone track (gen:', currentGen, 'opus:', publishSig, ')');
   await r.localParticipant.publishTrack(audioTrack, publishOpts);
   lastMicGenRef.current = currentGen;
@@ -365,7 +431,16 @@ export function useLiveKit() {
   const rnnoiseEnabled = useVoiceStore((s) => s.rnnoiseEnabled);
   const audioMode = useVoiceStore((s) => s.audioMode);
   const audioStereo = useVoiceStore((s) => s.audioStereo);
+  const audioBitrateAuto = useVoiceStore((s) => s.audioBitrateAuto);
   const audioBitrate = useVoiceStore((s) => s.audioBitrate);
+  const activeChannelAudioBitrate = useSpaceStore((s) => {
+    const cvId = useVoiceStore.getState().currentVoiceChannelId;
+    return cvId ? s.channels.find((c) => c.id === cvId)?.audioBitrateKbps ?? null : null;
+  });
+  const activeChannelAllowMusic = useSpaceStore((s) => {
+    const cvId = useVoiceStore.getState().currentVoiceChannelId;
+    return cvId ? s.channels.find((c) => c.id === cvId)?.allowMusicMode ?? null : null;
+  });
 
   const lastMicGenRef = useRef(0);
   const lastPublishSigRef = useRef('');
@@ -567,14 +642,15 @@ export function useLiveKit() {
         // Sync voice processing & Opus capture settings to AudioManager.
         // Music mode bypasses speech DSP (AEC/NS/AGC/RNNoise) so full-range
         // audio passes uncolored; Stereo mode also bypasses mono RNNoise.
-        const isMusic = audioMode === 'music';
+        const effectiveOpus = getEffectiveAudioConfigForCurrentRoom();
+        const isMusic = effectiveOpus.audioMode === 'music';
         audioManager.setVoiceProcessing({
           echoCancellation: isMusic ? false : echoCancellation,
           noiseSuppression: isMusic ? false : noiseSuppression,
           autoGainControl: isMusic ? false : autoGainControl,
-          stereo: audioStereo,
+          stereo: effectiveOpus.audioStereo,
         });
-        await audioManager.setRnnoiseEnabled(isMusic || audioStereo ? false : rnnoiseEnabled);
+        await audioManager.setRnnoiseEnabled(isMusic || effectiveOpus.audioStereo ? false : rnnoiseEnabled);
         if (!isCurrentRoom()) return;
 
         const micPub = r.localParticipant.getTrackPublications()
@@ -642,7 +718,7 @@ export function useLiveKit() {
       cancelled = true;
       unsubscribeResume();
     };
-  }, [isMuted, isDeafened, spaceMutedUserIds, spaceDeafenedUserIds, permissionMutedUserIds, inputDeviceId, inputVolume, isConnected, echoCancellation, noiseSuppression, autoGainControl, rnnoiseEnabled, audioMode, audioStereo, audioBitrate, micPermissionDenied]);
+  }, [isMuted, isDeafened, spaceMutedUserIds, spaceDeafenedUserIds, permissionMutedUserIds, inputDeviceId, inputVolume, isConnected, echoCancellation, noiseSuppression, autoGainControl, rnnoiseEnabled, audioMode, audioStereo, audioBitrateAuto, audioBitrate, activeChannelAudioBitrate, activeChannelAllowMusic, streamHostLimits, micPermissionDenied]);
 
   // Subscribe to upstream-input-track-end events from AudioManager whenever a
   // room is connected. The published mic track is a clone of a WebAudio

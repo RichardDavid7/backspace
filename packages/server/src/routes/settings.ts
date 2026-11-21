@@ -43,6 +43,10 @@ function rowToLimits(row: typeof schema.instanceSettings.$inferSelect): Instance
       } catch { return null; }
     })(),
     allowCustomBitrate: row.allowCustomBitrate === 1,
+    defaultAudioBitrateKbps: row.defaultAudioBitrateKbps ?? 64,
+    maxAudioBitrateKbps: row.maxAudioBitrateKbps ?? 512,
+    allowMusicMode: (row.allowMusicMode ?? 1) === 1,
+    allowStereoAudio: (row.allowStereoAudio ?? 1) === 1,
   };
 }
 
@@ -214,6 +218,28 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       updateData.allowCustomBitrate = body.allowCustomBitrate ? 1 : 0;
     }
 
+    if (body.defaultAudioBitrateKbps !== undefined) {
+      if (typeof body.defaultAudioBitrateKbps !== 'number' || !Number.isFinite(body.defaultAudioBitrateKbps) || body.defaultAudioBitrateKbps < 8 || body.defaultAudioBitrateKbps > 512) {
+        return sendError(reply, 400, 'validation_failed');
+      }
+      updateData.defaultAudioBitrateKbps = Math.round(body.defaultAudioBitrateKbps);
+    }
+
+    if (body.maxAudioBitrateKbps !== undefined) {
+      if (typeof body.maxAudioBitrateKbps !== 'number' || !Number.isFinite(body.maxAudioBitrateKbps) || body.maxAudioBitrateKbps < 8 || body.maxAudioBitrateKbps > 512) {
+        return sendError(reply, 400, 'validation_failed');
+      }
+      updateData.maxAudioBitrateKbps = Math.round(body.maxAudioBitrateKbps);
+    }
+
+    if (body.allowMusicMode !== undefined) {
+      updateData.allowMusicMode = body.allowMusicMode ? 1 : 0;
+    }
+
+    if (body.allowStereoAudio !== undefined) {
+      updateData.allowStereoAudio = body.allowStereoAudio ? 1 : 0;
+    }
+
     if (body.bitrateMatrixOverrides !== undefined) {
       if (body.bitrateMatrixOverrides === null) {
         updateData.bitrateMatrixOverrides = null;
@@ -249,6 +275,12 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
     const effectiveMax = (updateData.maxBitrateKbps as number | undefined) ?? currentRow.maxBitrateKbps;
     if (effectiveMin >= effectiveMax) {
       return sendError(reply, 400, 'streaming_min_bitrate_not_below_max');
+    }
+
+    const effectiveAudioMax = (updateData.maxAudioBitrateKbps as number | undefined) ?? currentRow.maxAudioBitrateKbps ?? 512;
+    const effectiveAudioDefault = (updateData.defaultAudioBitrateKbps as number | undefined) ?? currentRow.defaultAudioBitrateKbps ?? 64;
+    if (effectiveAudioDefault > effectiveAudioMax) {
+      updateData.defaultAudioBitrateKbps = effectiveAudioMax;
     }
 
     // This route carries discoveryEnabled but not directoryEnabled: only the

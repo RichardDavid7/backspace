@@ -108,18 +108,23 @@
         "label": "Modo de áudio",
         "description": "Voz otimiza para fala com supressão de silêncio (DTX). Música desativa o processamento de fala e o DTX para fidelidade total de estúdio.",
         "voice": "Voz",
-        "music": "Música"
+        "music": "Música",
+        "musicDisabledByPolicy": "O modo Música está desativado nesta instância ou neste canal de voz."
       },
       "stereo": {
         "label": "Áudio estéreo",
-        "description": "Captura e transmite áudio estéreo real em 2 canais. Ignora a supressão de ruído com IA (mono) enquanto estiver ativado."
+        "description": "Captura e transmite áudio estéreo real em 2 canais. Ignora a supressão de ruído com IA (mono) enquanto estiver ativado.",
+        "disabledByInstance": "O áudio estéreo está desativado pelo administrador da instância."
       },
       "bitrate": {
         "label": "Bitrate",
         "hintDefault": "64 kbps é o padrão de voz. Arraste para equilibrar nitidez e uso de banda.",
         "warningLow": "Bitrate muito baixo pode reduzir visivelmente a nitidez da voz.",
         "warningHigh": "Bitrates acima de 96 kbps consomem mais banda e podem afetar conexões mais lentas.",
-        "warningVeryHigh": "Bitrate de estúdio muito alto — consome bastante banda; indicado para música ou interfaces de áudio dedicadas em conexões rápidas."
+        "warningVeryHigh": "Bitrate de estúdio muito alto — consome bastante banda; indicado para música ou interfaces de áudio dedicadas em conexões rápidas.",
+        "autoLabel": "Bitrate automático",
+        "autoDescription": "Segue automaticamente o bitrate do canal de voz (ou o padrão da instância).",
+        "autoBadge": "Automático"
       },
       "bypassNoticeMusic": "As opções de processamento de voz abaixo ficam ignoradas enquanto o modo Música estiver ativo.",
       "bypassNoticeStereo": "A supressão de ruído com IA (RNNoise) é apenas mono e fica ignorada enquanto o Áudio estéreo estiver ativado."

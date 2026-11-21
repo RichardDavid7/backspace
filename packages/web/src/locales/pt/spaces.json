@@ -67,7 +67,20 @@
         "note": "Este canal fica oculto para membros sem acesso explícito. Usuários com a permissão de Administrador e os donos do espaço sempre podem ver todos os canais.",
         "unhideOnSave": "Ao salvar, este canal ficará visível para todos os membros."
       },
-      "deleteButton": "Excluir canal"
+      "deleteButton": "Excluir canal",
+      "voiceAudio": {
+        "sectionTitle": "Áudio de voz (Opus)",
+        "autoBitrate": {
+          "label": "Usar bitrate padrão da instância",
+          "description": "Atualmente {{kbps}} kbps. Desative para definir um bitrate próprio para este canal de voz."
+        },
+        "bitrateLabel": "Bitrate do canal",
+        "allowMusicMode": {
+          "label": "Permitir modo Música no Opus",
+          "description": "Permite que participantes deste canal usem o modo Música.",
+          "disabledByInstance": "O modo Música está desativado nas configurações da instância."
+        }
+      }
     },
     "delete": {
       "title": "Excluir #{{name}}?",

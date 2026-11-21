@@ -339,6 +339,20 @@
     "capWarning": {
       "title": "Matrixwerte überschreiten die globale Obergrenze.",
       "description": "Einige Bitraten liegen über deinem Maximum von {{max}}. Streams mit diesen Kombinationen werden auf deine Obergrenze heruntergeregelt."
+    },
+    "voiceAudio": {
+      "label": "Sprachaudio (Opus)",
+      "description": "Steuert Standard- und Maximal-Bitrate sowie Musikmodus und Stereo-Audio für diese Instanz.",
+      "allowMusicMode": {
+        "label": "Opus-Musikmodus erlauben",
+        "description": "Erlaubt Nutzern und Sprachkanälen den Wechsel vom Sprach- in den Musikmodus."
+      },
+      "allowStereoAudio": {
+        "label": "Stereo-Audio erlauben",
+        "description": "Erlaubt die Aufnahme und Übertragung von 2-Kanal-Stereo-Opus-Audio."
+      },
+      "defaultBitrate": "Standard-Bitrate (Automatik)",
+      "maxBitrate": "Maximale Bitrate"
     }
   },
   "updates": {

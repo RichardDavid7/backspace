@@ -108,18 +108,23 @@
         "label": "音频模式",
         "description": "语音模式启用 DTX 以优化人声带宽；音乐模式关闭人声处理和 DTX 以获得全频段高保真音质。",
         "voice": "语音",
-        "music": "音乐"
+        "music": "音乐",
+        "musicDisabledByPolicy": "此实例或当前语音频道已禁用音乐模式。"
       },
       "stereo": {
         "label": "立体声",
-        "description": "采集并传输双声道立体声音频。开启时将绕过单声道 AI 噪声抑制。"
+        "description": "采集并传输双声道立体声音频。开启时将绕过单声道 AI 噪声抑制。",
+        "disabledByInstance": "实例管理员已禁用立体声音频。"
       },
       "bitrate": {
         "label": "比特率",
         "hintDefault": "64 kbps 为标准语音比特率。拖动滑块可在清晰度与带宽之间平衡。",
         "warningLow": "过低的比特率可能会明显降低语音清晰度。",
         "warningHigh": "较高的比特率会占用更多带宽，可能会影响网速较慢的用户。",
-        "warningVeryHigh": "极高的演播室级比特率 — 占用大量带宽，适合在高速网络下传输音乐或使用专业声卡。"
+        "warningVeryHigh": "极高的演播室级比特率 — 占用大量带宽，适合在高速网络下传输音乐或使用专业声卡。",
+        "autoLabel": "自动比特率",
+        "autoDescription": "自动跟随语音频道设置的比特率（或实例默认比特率）。",
+        "autoBadge": "自动"
       },
       "bypassNoticeMusic": "音乐模式开启时，下方的语音处理选项将被自动绕过。",
       "bypassNoticeStereo": "AI 噪声抑制 (RNNoise) 仅支持单声道，开启立体声时将被自动绕过。"

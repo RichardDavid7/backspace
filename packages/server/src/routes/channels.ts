@@ -46,6 +46,8 @@ function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
     topic: row.topic,
     position: row.position ?? 0,
     categoryId: row.categoryId ?? null,
+    audioBitrateKbps: row.audioBitrateKbps ?? null,
+    allowMusicMode: row.allowMusicMode === null || row.allowMusicMode === undefined ? null : row.allowMusicMode === 1,
     createdAt: row.createdAt,
   };
 }
@@ -377,7 +379,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, topic, position, categoryId } = request.body;
+    const { name, topic, position, categoryId, audioBitrateKbps, allowMusicMode } = request.body;
     const db = getDb();
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
@@ -429,6 +431,30 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
           return sendError(reply, 400, 'category_not_in_space', { id: categoryId });
         }
         updates.categoryId = categoryId;
+      }
+    }
+
+    if (audioBitrateKbps !== undefined) {
+      if (audioBitrateKbps === null) {
+        updates.audioBitrateKbps = null;
+      } else {
+        if (typeof audioBitrateKbps !== 'number' || !Number.isFinite(audioBitrateKbps) || audioBitrateKbps < 8 || audioBitrateKbps > 512) {
+          return sendError(reply, 400, 'validation_failed');
+        }
+        const inst = db.select({ maxAudioBitrateKbps: schema.instanceSettings.maxAudioBitrateKbps })
+          .from(schema.instanceSettings)
+          .where(eq(schema.instanceSettings.id, 1))
+          .get();
+        const cap = inst?.maxAudioBitrateKbps ?? 512;
+        updates.audioBitrateKbps = Math.min(Math.round(audioBitrateKbps), cap);
+      }
+    }
+
+    if (allowMusicMode !== undefined) {
+      if (allowMusicMode === null) {
+        updates.allowMusicMode = null;
+      } else {
+        updates.allowMusicMode = allowMusicMode ? 1 : 0;
       }
     }
 

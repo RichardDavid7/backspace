@@ -5,6 +5,8 @@ import {
   MAX_AUDIO_BITRATE_KBPS,
   type AudioMode,
 } from '../../../stores/voiceStore';
+import { useSettingsStore } from '../../../stores/settingsStore';
+import { useSpaceStore } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useFormatters } from '../../../i18n/formatters';
 import { Toggle } from '../../ui/Toggle';
@@ -31,17 +33,38 @@ export function VoicePanel() {
   const setAudioMode = useVoiceStore((s) => s.setAudioMode);
   const audioStereo = useVoiceStore((s) => s.audioStereo);
   const setAudioStereo = useVoiceStore((s) => s.setAudioStereo);
+  const audioBitrateAuto = useVoiceStore((s) => s.audioBitrateAuto);
+  const setAudioBitrateAuto = useVoiceStore((s) => s.setAudioBitrateAuto);
   const audioBitrate = useVoiceStore((s) => s.audioBitrate);
   const setAudioBitrate = useVoiceStore((s) => s.setAudioBitrate);
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const currentVoiceChannel = useSpaceStore((s) =>
+    currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined,
+  );
+  const streamingLimits = useSettingsStore((s) => s.streamingLimits);
 
-  const bitratePercent =
-    ((audioBitrate - MIN_AUDIO_BITRATE_KBPS) / (MAX_AUDIO_BITRATE_KBPS - MIN_AUDIO_BITRATE_KBPS)) * 100;
+  const instanceMaxBitrate = streamingLimits?.maxAudioBitrateKbps ?? MAX_AUDIO_BITRATE_KBPS;
+  const instanceDefaultBitrate = Math.min(streamingLimits?.defaultAudioBitrateKbps ?? 64, instanceMaxBitrate);
+  const instanceAllowMusic = streamingLimits?.allowMusicMode ?? true;
+  const instanceAllowStereo = streamingLimits?.allowStereoAudio ?? true;
+  const musicAllowed = instanceAllowMusic && (currentVoiceChannel?.allowMusicMode ?? true);
+  const effectiveAutoBitrate = currentVoiceChannel?.audioBitrateKbps != null
+    ? Math.min(currentVoiceChannel.audioBitrateKbps, instanceMaxBitrate)
+    : instanceDefaultBitrate;
+  const displayedBitrate = audioBitrateAuto
+    ? effectiveAutoBitrate
+    : Math.min(audioBitrate, instanceMaxBitrate);
+
+  const sliderSpan = Math.max(1, instanceMaxBitrate - MIN_AUDIO_BITRATE_KBPS);
+  const bitratePercent = ((displayedBitrate - MIN_AUDIO_BITRATE_KBPS) / sliderSpan) * 100;
+  const bitrateTicks = [MIN_AUDIO_BITRATE_KBPS, 128, 256, 384, instanceMaxBitrate]
+    .filter((v, i, arr) => v >= MIN_AUDIO_BITRATE_KBPS && v <= instanceMaxBitrate && arr.indexOf(v) === i);
   const bitrateNotice =
-    audioBitrate < 32
+    displayedBitrate < 32
       ? { text: t('settings:voice.opus.bitrate.warningLow'), tone: 'text-accent-amber' }
-      : audioBitrate > 192
+      : displayedBitrate > 192
         ? { text: t('settings:voice.opus.bitrate.warningVeryHigh'), tone: 'text-accent-amber' }
-        : audioBitrate > 96
+        : displayedBitrate > 96
           ? { text: t('settings:voice.opus.bitrate.warningHigh'), tone: 'text-accent-amber/90' }
           : { text: t('settings:voice.opus.bitrate.hintDefault'), tone: 'text-txt-tertiary' };
   // The floating window is mounted only by the desktop layout (AppLayout), and
@@ -125,81 +148,110 @@ export function VoicePanel() {
               <div className="text-xs text-txt-tertiary">{t('settings:voice.opus.mode.description')}</div>
             </div>
             <div className="inline-flex rounded-lg bg-surface-base p-0.5 shrink-0">
-              {(['voice', 'music'] as const satisfies readonly AudioMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setAudioMode(mode)}
-                  aria-pressed={audioMode === mode}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                    audioMode === mode
-                      ? 'bg-accent-primary text-white'
-                      : 'text-txt-secondary hover:text-txt-primary'
-                  }`}
-                >
-                  {t(`settings:voice.opus.mode.${mode}`)}
-                </button>
-              ))}
+              {(['voice', 'music'] as const satisfies readonly AudioMode[]).map((mode) => {
+                const disabled = mode === 'music' && !musicAllowed;
+                const active = (musicAllowed ? audioMode : 'voice') === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setAudioMode(mode)}
+                    aria-pressed={active}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                      active
+                        ? 'bg-accent-primary text-white'
+                        : 'text-txt-secondary hover:text-txt-primary'
+                    }`}
+                  >
+                    {t(`settings:voice.opus.mode.${mode}`)}
+                  </button>
+                );
+              })}
             </div>
           </div>
+          {!musicAllowed && (
+            <p className="text-xs text-txt-tertiary -mt-2">{t('settings:voice.opus.mode.musicDisabledByPolicy')}</p>
+          )}
 
           {/* Stereo toggle */}
           <div className="flex items-center justify-between py-1">
             <div className="flex-1 mr-4">
               <div className="text-sm text-txt-primary">{t('settings:voice.opus.stereo.label')}</div>
-              <div className="text-xs text-txt-tertiary">{t('settings:voice.opus.stereo.description')}</div>
+              <div className="text-xs text-txt-tertiary">
+                {instanceAllowStereo
+                  ? t('settings:voice.opus.stereo.description')
+                  : t('settings:voice.opus.stereo.disabledByInstance')}
+              </div>
             </div>
             <Toggle
-              enabled={audioStereo}
-              onChange={setAudioStereo}
+              enabled={instanceAllowStereo && audioStereo}
+              onChange={(v) => { if (instanceAllowStereo) setAudioStereo(v); }}
+              disabled={!instanceAllowStereo}
               ariaLabel={t('settings:voice.opus.stereo.label')}
             />
           </div>
 
-          {/* Bitrate slider with contextual warnings underneath */}
-          <div className="py-1">
-            <div className="flex items-center justify-between mb-2">
+          {/* Bitrate Auto toggle + manual slider with contextual warnings underneath */}
+          <div className="py-1 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <div className="text-sm text-txt-primary">{t('settings:voice.opus.bitrate.autoLabel')}</div>
+                <div className="text-xs text-txt-tertiary">{t('settings:voice.opus.bitrate.autoDescription')}</div>
+              </div>
+              <Toggle
+                enabled={audioBitrateAuto}
+                onChange={setAudioBitrateAuto}
+                ariaLabel={t('settings:voice.opus.bitrate.autoLabel')}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
               <div className="text-sm text-txt-primary">{t('settings:voice.opus.bitrate.label')}</div>
               <div className="text-xs text-txt-secondary font-medium tabular-nums">
                 {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
-                {audioBitrate} kbps
+                {audioBitrateAuto ? `${t('settings:voice.opus.bitrate.autoBadge')} (${displayedBitrate} kbps)` : `${displayedBitrate} kbps`}
               </div>
             </div>
-            <input
-              type="range"
-              min={MIN_AUDIO_BITRATE_KBPS}
-              max={MAX_AUDIO_BITRATE_KBPS}
-              step={8}
-              value={audioBitrate}
-              onChange={(e) => setAudioBitrate(Number(e.target.value))}
-              aria-label={t('settings:voice.opus.bitrate.label')}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
-              style={{
-                background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${bitratePercent}%, rgb(var(--interactive-muted)) ${bitratePercent}%, rgb(var(--interactive-muted)) 100%)`,
-              }}
-            />
-            <div className="relative h-4 text-[10px] text-txt-tertiary tabular-nums mt-1">
-              {[MIN_AUDIO_BITRATE_KBPS, 128, 256, 384, MAX_AUDIO_BITRATE_KBPS].map((kbps) => {
-                const pct = ((kbps - MIN_AUDIO_BITRATE_KBPS) / (MAX_AUDIO_BITRATE_KBPS - MIN_AUDIO_BITRATE_KBPS)) * 100;
-                const posClass =
-                  kbps === MIN_AUDIO_BITRATE_KBPS
-                    ? 'left-0'
-                    : kbps === MAX_AUDIO_BITRATE_KBPS
-                      ? 'right-0'
-                      : '-translate-x-1/2';
-                const posStyle =
-                  kbps === MIN_AUDIO_BITRATE_KBPS || kbps === MAX_AUDIO_BITRATE_KBPS
-                    ? undefined
-                    : { left: `${pct}%` };
-                return (
-                  <span key={kbps} className={`absolute top-0 ${posClass}`} style={posStyle}>
-                    {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
-                    {kbps} kbps
-                  </span>
-                );
-              })}
-            </div>
-            <p className={`text-xs mt-2 ${bitrateNotice.tone}`}>{bitrateNotice.text}</p>
+            {!audioBitrateAuto && (
+              <>
+                <input
+                  type="range"
+                  min={MIN_AUDIO_BITRATE_KBPS}
+                  max={instanceMaxBitrate}
+                  step={8}
+                  value={displayedBitrate}
+                  onChange={(e) => setAudioBitrate(Number(e.target.value))}
+                  aria-label={t('settings:voice.opus.bitrate.label')}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
+                  style={{
+                    background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${bitratePercent}%, rgb(var(--interactive-muted)) ${bitratePercent}%, rgb(var(--interactive-muted)) 100%)`,
+                  }}
+                />
+                <div className="relative h-4 text-[10px] text-txt-tertiary tabular-nums mt-1">
+                  {bitrateTicks.map((kbps) => {
+                    const pct = ((kbps - MIN_AUDIO_BITRATE_KBPS) / sliderSpan) * 100;
+                    const posClass =
+                      kbps === MIN_AUDIO_BITRATE_KBPS
+                        ? 'left-0'
+                        : kbps === instanceMaxBitrate
+                          ? 'right-0'
+                          : '-translate-x-1/2';
+                    const posStyle =
+                      kbps === MIN_AUDIO_BITRATE_KBPS || kbps === instanceMaxBitrate
+                        ? undefined
+                        : { left: `${pct}%` };
+                    return (
+                      <span key={kbps} className={`absolute top-0 ${posClass}`} style={posStyle}>
+                        {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
+                        {kbps} kbps
+                      </span>
+                    );
+                  })}
+                </div>
+                <p className={`text-xs mt-1 ${bitrateNotice.tone}`}>{bitrateNotice.text}</p>
+              </>
+            )}
           </div>
         </div>
       </div>
