@@ -18,7 +18,7 @@ import { getApiForOrigin, getChannelOrigin, getMyUserIdForOrigin, useSpaceStore 
 import { homeIdentityOf } from '../utils/identity';
 import { refreshStreamHostLimits, useStreamHostLimits } from '../utils/streamHostLimits';
 import { wsSend } from './useWebSocket';
-import { useVoiceStore, type VoiceConnectionQuality } from '../stores/voiceStore';
+import { useVoiceStore, type AudioMode, type VoiceConnectionQuality } from '../stores/voiceStore';
 import { myRowForOrigin } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import type { User } from '@backspace/shared';
@@ -258,34 +258,66 @@ function destroyRoom(room: Room | null): Promise<void> | void {
   return room.disconnect();
 }
 
+export interface AudioPublishConfig {
+  audioMode: AudioMode;
+  audioStereo: boolean;
+  audioBitrate: number;
+}
+
+/**
+ * Builds LiveKit `publishTrack` options for the microphone track from the
+ * user's Opus audio settings:
+ * - `audioMode === 'voice'`: DTX enabled (bandwidth savings on silence), RED
+ *   enabled when mono for packet-loss resilience.
+ * - `audioMode === 'music'`: DTX and RED disabled so full bitrate goes to
+ *   uncolored, continuous audio without silence gating.
+ * - `audioStereo`: sets `forceStereo` (and disables RED, which is mono-only).
+ * - `audioBitrate`: target Opus max bitrate in kbps, converted to bps.
+ */
+export function buildAudioPublishOptions(cfg: AudioPublishConfig) {
+  const isVoice = cfg.audioMode === 'voice';
+  return {
+    name: 'microphone',
+    source: Track.Source.Microphone,
+    audioPreset: { maxBitrate: cfg.audioBitrate * 1000 },
+    dtx: isVoice,
+    red: isVoice && !cfg.audioStereo,
+    forceStereo: cfg.audioStereo,
+  } as const;
+}
+
 /**
  * Ensures a fresh microphone track from the AudioManager pipeline is published
  * to the supplied room. If the existing publication is already current (live
- * MediaStreamTrack matching the latest AudioManager streamGeneration), this is
- * a no-op apart from un-muting. Otherwise the stale track is unpublished and a
- * cloned destination-node track is published in its place.
- *
- * Extracted from the syncMic effect so the input-track-loss recovery path can
- * call it directly — without relying on syncMic's React dep array catching a
- * change that never re-renders the hook.
+ * MediaStreamTrack matching the latest AudioManager streamGeneration and Opus
+ * publish signature), this is a no-op apart from un-muting. Otherwise the stale
+ * track is unpublished and a cloned destination-node track is published in its
+ * place with the current Opus encoding options.
  */
-async function republishMicrophone(r: Room, lastMicGenRef: { current: number }): Promise<void> {
+async function republishMicrophone(
+  r: Room,
+  lastMicGenRef: { current: number },
+  lastPublishSigRef?: { current: string },
+): Promise<void> {
   const audioManager = AudioManager.getInstance();
   const currentGen = audioManager.getStreamGeneration();
+  const { audioMode, audioStereo, audioBitrate } = useVoiceStore.getState();
+  const publishSig = `${audioMode}:${audioStereo}:${audioBitrate}`;
 
   const micPub = r.localParticipant.getTrackPublications()
     .find(p => p.source === Track.Source.Microphone);
 
   if (micPub?.track) {
     // Track already published — check if it's still current
-    if (micPub.track.mediaStreamTrack?.readyState === 'live' && lastMicGenRef.current === currentGen) {
+    const sameOpus = !lastPublishSigRef || lastPublishSigRef.current === publishSig;
+    if (micPub.track.mediaStreamTrack?.readyState === 'live' && lastMicGenRef.current === currentGen && sameOpus) {
       // Current and live — just unmute if needed
       if (micPub.isMuted) {
         await r.localParticipant.setMicrophoneEnabled(true);
       }
       return;
     }
-    // Track is stale (device or constraint change) — replace it
+    // Track is stale (device, constraint, or Opus config change) — replace it
     await r.localParticipant.unpublishTrack(micPub.track as LocalAudioTrack);
   }
 
@@ -293,12 +325,11 @@ async function republishMicrophone(r: Room, lastMicGenRef: { current: number }):
   const audioTrack = audioManager.getFreshTrack();
   if (!audioTrack) return;
 
-  console.log('[LiveKit] Publishing fresh microphone track (gen:', currentGen, ')');
-  await r.localParticipant.publishTrack(audioTrack, {
-    name: 'microphone',
-    source: Track.Source.Microphone,
-  });
+  const publishOpts = buildAudioPublishOptions({ audioMode, audioStereo, audioBitrate });
+  console.log('[LiveKit] Publishing fresh microphone track (gen:', currentGen, 'opus:', publishSig, ')');
+  await r.localParticipant.publishTrack(audioTrack, publishOpts);
   lastMicGenRef.current = currentGen;
+  if (lastPublishSigRef) lastPublishSigRef.current = publishSig;
 }
 
 export function useLiveKit() {
@@ -332,8 +363,12 @@ export function useLiveKit() {
   const noiseSuppression = useVoiceStore((s) => s.noiseSuppression);
   const autoGainControl = useVoiceStore((s) => s.autoGainControl);
   const rnnoiseEnabled = useVoiceStore((s) => s.rnnoiseEnabled);
+  const audioMode = useVoiceStore((s) => s.audioMode);
+  const audioStereo = useVoiceStore((s) => s.audioStereo);
+  const audioBitrate = useVoiceStore((s) => s.audioBitrate);
 
   const lastMicGenRef = useRef(0);
+  const lastPublishSigRef = useRef('');
 
   const updateParticipants = useCallback(() => {
     const r = roomRef.current;
@@ -529,9 +564,17 @@ export function useLiveKit() {
         if (!isCurrentRoom()) return;
         const audioManager = AudioManager.getInstance();
 
-        // Sync voice processing settings to AudioManager
-        audioManager.setVoiceProcessing({ echoCancellation, noiseSuppression, autoGainControl });
-        await audioManager.setRnnoiseEnabled(rnnoiseEnabled);
+        // Sync voice processing & Opus capture settings to AudioManager.
+        // Music mode bypasses speech DSP (AEC/NS/AGC/RNNoise) so full-range
+        // audio passes uncolored; Stereo mode also bypasses mono RNNoise.
+        const isMusic = audioMode === 'music';
+        audioManager.setVoiceProcessing({
+          echoCancellation: isMusic ? false : echoCancellation,
+          noiseSuppression: isMusic ? false : noiseSuppression,
+          autoGainControl: isMusic ? false : autoGainControl,
+          stereo: audioStereo,
+        });
+        await audioManager.setRnnoiseEnabled(isMusic || audioStereo ? false : rnnoiseEnabled);
         if (!isCurrentRoom()) return;
 
         const micPub = r.localParticipant.getTrackPublications()
@@ -582,7 +625,7 @@ export function useLiveKit() {
         }
         if (!isCurrentRoom()) return;
         audioManager.setInputVolume(inputVolume);
-        await republishMicrophone(r, lastMicGenRef);
+        await republishMicrophone(r, lastMicGenRef, lastPublishSigRef);
       } catch (err) {
         console.error('[LiveKit] Failed to sync mic state:', err);
       }
@@ -599,7 +642,7 @@ export function useLiveKit() {
       cancelled = true;
       unsubscribeResume();
     };
-  }, [isMuted, isDeafened, spaceMutedUserIds, spaceDeafenedUserIds, permissionMutedUserIds, inputDeviceId, inputVolume, isConnected, echoCancellation, noiseSuppression, autoGainControl, rnnoiseEnabled, micPermissionDenied]);
+  }, [isMuted, isDeafened, spaceMutedUserIds, spaceDeafenedUserIds, permissionMutedUserIds, inputDeviceId, inputVolume, isConnected, echoCancellation, noiseSuppression, autoGainControl, rnnoiseEnabled, audioMode, audioStereo, audioBitrate, micPermissionDenied]);
 
   // Subscribe to upstream-input-track-end events from AudioManager whenever a
   // room is connected. The published mic track is a clone of a WebAudio
@@ -632,7 +675,7 @@ export function useLiveKit() {
         try {
           await am.setInputDevice(deviceId);
           if (roomRef.current !== subscriberRoom) return;
-          await republishMicrophone(subscriberRoom, lastMicGenRef);
+          await republishMicrophone(subscriberRoom, lastMicGenRef, lastPublishSigRef);
           return;
         } catch {
           // copy already holds 'Microphone could not be restored'
