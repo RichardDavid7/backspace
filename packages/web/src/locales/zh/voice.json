@@ -322,6 +322,9 @@
     "folderPlaceholder": "梗图、反应、游戏…",
     "noFolder": "无文件夹",
     "searchPlaceholder": "搜索音效或文件夹…",
-    "addToFolder": "添加音效到 {{folder}}"
+    "addToFolder": "添加音效到 {{folder}}",
+    "managerInstanceDesc": "此实例上所有人可用的默认音效。",
+    "managerSpaceDesc": "与此空间成员共享的自定义音效。",
+    "managerDmDesc": "与此群组成员共享的自定义音效。"
   }
 }

@@ -1,0 +1,342 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { SoundboardScopeType, SoundboardSound } from '@backspace/shared';
+import { getApiForOrigin } from '../../stores/spaceStore';
+import { useUIStore } from '../../stores/uiStore';
+import { AudioManager } from '../../audio/AudioManager';
+import { SoundboardEditorModal } from './SoundboardEditorModal';
+
+interface SoundboardManagerPanelProps {
+  scopeType: SoundboardScopeType;
+  scopeId: string | null;
+  origin: string;
+}
+
+interface EditorState {
+  sound: SoundboardSound | null;
+  defaultFolder: string | null;
+}
+
+function extractFolderNames(sounds: SoundboardSound[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const s of sounds) {
+    const f = s.folder?.trim();
+    if (f && !seen.has(f)) {
+      seen.add(f);
+      result.push(f);
+    }
+  }
+  return result;
+}
+
+export function SoundboardManagerPanel({
+  scopeType,
+  scopeId,
+  origin,
+}: SoundboardManagerPanelProps) {
+  const { t } = useTranslation('voice');
+  const addToast = useUIStore((s) => s.addToast);
+
+  const [sounds, setSounds] = useState<SoundboardSound[]>([]);
+  const [canManage, setCanManage] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [editor, setEditor] = useState<EditorState | null>(null);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
+
+  const fetchSounds = useCallback(async () => {
+    setLoading(true);
+    try {
+      const client = getApiForOrigin(origin);
+      const data = await client.soundboard.list({
+        spaceId: scopeType === 'space' && scopeId ? scopeId : undefined,
+        dmChannelId: scopeType === 'dm' && scopeId ? scopeId : undefined,
+      });
+      if (scopeType === 'instance') {
+        setSounds(data.instanceSounds);
+        setCanManage(data.canManageInstance);
+      } else {
+        setSounds(data.scopedSounds);
+        setCanManage(data.canManageScope);
+      }
+    } catch {
+      addToast(t('soundboard.loadFailed'), 'warning');
+    } finally {
+      setLoading(false);
+    }
+  }, [origin, scopeType, scopeId, addToast, t]);
+
+  useEffect(() => {
+    void fetchSounds();
+  }, [fetchSounds]);
+
+  const existingFolders = useMemo(() => extractFolderNames(sounds), [sounds]);
+
+  const toggleFolder = (folderName: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderName)) next.delete(folderName);
+      else next.add(folderName);
+      return next;
+    });
+  };
+
+  const handlePreview = (sound: SoundboardSound) => {
+    const resolvedUrl = sound.fileUrl.startsWith('/') && origin
+      ? `${origin}${sound.fileUrl}`
+      : sound.fileUrl;
+    setPlayingId(sound.id);
+    setTimeout(() => {
+      setPlayingId((curr) => (curr === sound.id ? null : curr));
+    }, Math.max(500, Math.min(sound.durationMs || 1500, 10_000)));
+    void AudioManager.getInstance().playSoundUrl(resolvedUrl, { volume: 0.8 });
+  };
+
+  const handleDelete = async (sound: SoundboardSound) => {
+    try {
+      const client = getApiForOrigin(origin);
+      await client.soundboard.remove(sound.id);
+      setSounds((prev) => prev.filter((s) => s.id !== sound.id));
+      addToast(t('soundboard.deletedToast'), 'success');
+    } catch {
+      addToast(t('soundboard.deleteFailed'), 'warning');
+    }
+  };
+
+  const handleMoveInGroup = async (
+    soundId: string,
+    groupFolder: string | null,
+    direction: -1 | 1,
+  ) => {
+    const groupIndices: number[] = [];
+    sounds.forEach((s, i) => {
+      if ((s.folder?.trim() || null) === groupFolder) groupIndices.push(i);
+    });
+    const posInGroup = groupIndices.findIndex((idx) => sounds[idx]?.id === soundId);
+    const targetPosInGroup = posInGroup + direction;
+    if (posInGroup < 0 || targetPosInGroup < 0 || targetPosInGroup >= groupIndices.length) return;
+
+    const fromIdx = groupIndices[posInGroup]!;
+    const toIdx = groupIndices[targetPosInGroup]!;
+    const fromItem = sounds[fromIdx];
+    const toItem = sounds[toIdx];
+    if (!fromItem || !toItem) return;
+
+    const prevSounds = sounds;
+    const next = sounds.map((item, i) => {
+      if (i === fromIdx) return toItem;
+      if (i === toIdx) return fromItem;
+      return item;
+    });
+    setSounds(next);
+
+    try {
+      const client = getApiForOrigin(origin);
+      await client.soundboard.reorder(
+        scopeType,
+        scopeId,
+        next.map((s) => s.id),
+      );
+    } catch {
+      setSounds(prevSounds);
+      addToast(t('soundboard.reorderFailed'), 'warning');
+    }
+  };
+
+  const ungrouped = sounds.filter((s) => !s.folder?.trim());
+  const folderMap = new Map<string, SoundboardSound[]>();
+  for (const s of sounds) {
+    const f = s.folder?.trim();
+    if (!f) continue;
+    folderMap.set(f, [...(folderMap.get(f) ?? []), s]);
+  }
+
+  const renderRows = (items: SoundboardSound[], groupFolder: string | null) => (
+    <div className="space-y-1.5">
+      {items.map((sound, idx) => {
+        const isPlaying = playingId === sound.id;
+        return (
+          <div
+            key={sound.id}
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors ${
+              isPlaying
+                ? 'bg-accent-sky/15 border-accent-sky/60'
+                : 'bg-surface-channel/70 border-white/[0.06] hover:border-white/10'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => handlePreview(sound)}
+              className="w-8 h-8 rounded-lg bg-surface-elevated/80 hover:bg-accent-sky/20 flex items-center justify-center text-base shrink-0 transition-colors cursor-pointer"
+              title={t('soundboard.preview')}
+            >
+              {sound.emoji}
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-txt-primary truncate">{sound.name}</div>
+              <div className="text-[11px] text-txt-tertiary font-mono">
+                {t('soundboard.seconds', { value: (sound.durationMs / 1000).toFixed(2) })}
+              </div>
+            </div>
+            {canManage && (
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  disabled={idx === 0}
+                  onClick={() => void handleMoveInGroup(sound.id, groupFolder, -1)}
+                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
+                  aria-label={t('soundboard.moveUp')}
+                  title={t('soundboard.moveUp')}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  disabled={idx === items.length - 1}
+                  onClick={() => void handleMoveInGroup(sound.id, groupFolder, 1)}
+                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
+                  aria-label={t('soundboard.moveDown')}
+                  title={t('soundboard.moveDown')}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M19 12l-7 7-7-7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditor({ sound, defaultFolder: sound.folder })}
+                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-accent-sky hover:bg-interactive-hover transition-colors cursor-pointer"
+                  aria-label={t('soundboard.edit')}
+                  title={t('soundboard.edit')}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(sound)}
+                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-accent-rose hover:bg-interactive-hover transition-colors cursor-pointer"
+                  aria-label={t('soundboard.delete')}
+                  title={t('soundboard.delete')}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const descriptionKey = scopeType === 'instance'
+    ? 'soundboard.managerInstanceDesc'
+    : scopeType === 'space'
+      ? 'soundboard.managerSpaceDesc'
+      : 'soundboard.managerDmDesc';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-txt-primary">{t('soundboard.title')}</h2>
+          <p className="text-xs text-txt-tertiary mt-0.5">{t(descriptionKey)}</p>
+        </div>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setEditor({ sound: null, defaultFolder: null })}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-sky text-surface-950 hover:bg-accent-sky/90 text-xs font-semibold transition-colors shrink-0 cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+            </svg>
+            <span>{t('soundboard.addTitle')}</span>
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="py-8 text-center text-sm text-txt-tertiary">{t('soundboard.loading')}</div>
+      ) : sounds.length === 0 ? (
+        <div className="py-8 px-4 text-center rounded-xl bg-surface-channel/50 border border-white/[0.06] text-sm text-txt-tertiary">
+          {t('soundboard.emptyScope')}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {ungrouped.length > 0 && renderRows(ungrouped, null)}
+
+          {Array.from(folderMap.entries()).map(([folderName, folderSounds]) => {
+            const isCollapsed = collapsedFolders.has(folderName);
+            return (
+              <div
+                key={folderName}
+                className="rounded-xl bg-surface-channel/40 border border-white/[0.06] p-3 space-y-2.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleFolder(folderName)}
+                    className="flex items-center gap-2 min-w-0 flex-1 text-left text-sm font-medium text-txt-primary hover:text-accent-sky transition-colors cursor-pointer"
+                  >
+                    <svg
+                      className={`w-4 h-4 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                    </svg>
+                    <svg className="w-4 h-4 shrink-0 text-accent-sky/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                    </svg>
+                    <span className="truncate">{folderName}</span>
+                    <span className="text-xs text-txt-tertiary shrink-0">{folderSounds.length}</span>
+                  </button>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setEditor({ sound: null, defaultFolder: folderName })}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-txt-tertiary hover:text-accent-sky hover:bg-interactive-hover transition-colors cursor-pointer"
+                      aria-label={t('soundboard.addToFolder', { folder: folderName })}
+                      title={t('soundboard.addToFolder', { folder: folderName })}
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                      </svg>
+                      <span>{t('soundboard.addButton')}</span>
+                    </button>
+                  )}
+                </div>
+
+                {!isCollapsed && renderRows(folderSounds, folderName)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <SoundboardEditorModal
+        isOpen={editor !== null}
+        scopeType={scopeType}
+        scopeId={scopeId}
+        origin={origin}
+        initialSound={editor?.sound ?? null}
+        defaultFolder={editor?.defaultFolder ?? null}
+        existingFolders={existingFolders}
+        onClose={() => setEditor(null)}
+        onSaved={() => {
+          void fetchSounds();
+        }}
+      />
+    </div>
+  );
+}

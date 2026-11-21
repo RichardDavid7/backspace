@@ -324,6 +324,9 @@
     "folderPlaceholder": "Memes, Reaktionen, Spiele…",
     "noFolder": "Ohne Ordner",
     "searchPlaceholder": "Sounds oder Ordner suchen…",
-    "addToFolder": "Sound zu {{folder}} hinzufügen"
+    "addToFolder": "Sound zu {{folder}} hinzufügen",
+    "managerInstanceDesc": "Standard-Sounds, die allen auf dieser Instanz zur Verfügung stehen.",
+    "managerSpaceDesc": "Benutzerdefinierte Sounds für Mitglieder dieses Spaces.",
+    "managerDmDesc": "Benutzerdefinierte Sounds für Mitglieder dieser Gruppe."
   }
 }
