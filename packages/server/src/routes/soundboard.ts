@@ -86,13 +86,6 @@ function canManageScope(userId: string, scopeType: SoundboardScopeType, scopeId:
       .get();
     return Boolean(member);
   }
-  if (scopeType === 'dm') {
-    const dmMember = db.select({ userId: schema.dmMembers.userId })
-      .from(schema.dmMembers)
-      .where(and(eq(schema.dmMembers.dmChannelId, scopeId), eq(schema.dmMembers.userId, userId)))
-      .get();
-    return Boolean(dmMember);
-  }
   return false;
 }
 
@@ -112,12 +105,12 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     },
   });
 
-  // GET /api/soundboard?spaceId=...&dmChannelId=...
-  app.get<{ Querystring: { spaceId?: string; dmChannelId?: string } }>('/api/soundboard', {
+  // GET /api/soundboard?spaceId=...
+  app.get<{ Querystring: { spaceId?: string } }>('/api/soundboard', {
     preHandler: authenticate,
   }, async (request, reply) => {
     const db = getDb();
-    const { spaceId, dmChannelId } = request.query;
+    const { spaceId } = request.query;
 
     const instanceRows = db.select()
       .from(schema.soundboardSounds)
@@ -146,22 +139,6 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
           .orderBy(asc(schema.soundboardSounds.position), asc(schema.soundboardSounds.createdAt))
           .all();
         scopeManageable = canManageScope(request.userId, 'space', spaceId);
-      }
-    } else if (dmChannelId) {
-      const dmMember = db.select({ userId: schema.dmMembers.userId })
-        .from(schema.dmMembers)
-        .where(and(eq(schema.dmMembers.dmChannelId, dmChannelId), eq(schema.dmMembers.userId, request.userId)))
-        .get();
-      if (dmMember) {
-        scopedRows = db.select()
-          .from(schema.soundboardSounds)
-          .where(and(
-            eq(schema.soundboardSounds.scopeType, 'dm'),
-            eq(schema.soundboardSounds.scopeId, dmChannelId),
-          ))
-          .orderBy(asc(schema.soundboardSounds.position), asc(schema.soundboardSounds.createdAt))
-          .all();
-        scopeManageable = true;
       }
     }
 
@@ -211,7 +188,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
           const trimmed = val.trim().slice(0, MAX_SOUNDBOARD_FOLDER);
           folder = trimmed.length > 0 ? trimmed : null;
         }
-        else if (part.fieldname === 'scopeType' && (val === 'instance' || val === 'space' || val === 'dm')) scopeType = val;
+        else if (part.fieldname === 'scopeType' && (val === 'instance' || val === 'space')) scopeType = val;
         else if (part.fieldname === 'scopeId' && val.trim()) scopeId = val.trim();
         else if (part.fieldname === 'durationMs') {
           const parsed = Number(val);

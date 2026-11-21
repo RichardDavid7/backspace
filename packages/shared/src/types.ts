@@ -1205,11 +1205,11 @@ export interface InstanceStreamingLimits {
   allowMusicMode?: boolean;
   /** Whether Stereo Opus audio is permitted on this instance (default true). */
   allowStereoAudio?: boolean;
-  /** Maximum custom soundboard clips per space or group DM (0 disables custom uploads, default 32). */
+  /** Maximum custom soundboard clips per space (0 disables custom uploads, default 32). */
   maxSoundboardSoundsPerScope?: number;
 }
 
-export type SoundboardScopeType = 'instance' | 'space' | 'dm';
+export type SoundboardScopeType = 'instance' | 'space';
 
 export interface SoundboardSound {
   id: string;

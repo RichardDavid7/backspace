@@ -281,7 +281,6 @@
   },
   "soundboard": {
     "title": "音效板",
-    "manage": "管理音效",
     "close": "关闭",
     "muteAll": "静音音效板",
     "unmuteAll": "取消静音音效板",
@@ -292,7 +291,6 @@
     "loadFailed": "无法加载音效板。",
     "instanceSection": "实例默认音效",
     "spaceSection": "空间音效",
-    "dmSection": "群组音效",
     "emptyScope": "尚未添加任何音效。",
     "addButton": "添加",
     "addTitle": "添加音效",
@@ -335,9 +333,8 @@
     "addToFolder": "添加音效到 {{folder}}",
     "managerInstanceDesc": "此实例上所有人可用的默认音效。",
     "managerSpaceDesc": "与此空间成员共享的自定义音效。",
-    "managerDmDesc": "与此群组成员共享的自定义音效。",
     "slotUsage": "{{current}} / {{max}} 个",
     "limitReached": "已达到此实例允许的自定义音效上限。",
-    "disabledByInstance": "实例管理员已禁用空间和群组的自定义音效。"
+    "disabledByInstance": "实例管理员已禁用空间的自定义音效。"
   }
 }

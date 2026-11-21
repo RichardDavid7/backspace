@@ -55,7 +55,6 @@ export function SoundboardManagerPanel({
       const client = getApiForOrigin(origin);
       const data = await client.soundboard.list({
         spaceId: scopeType === 'space' && scopeId ? scopeId : undefined,
-        dmChannelId: scopeType === 'dm' && scopeId ? scopeId : undefined,
       });
       if (scopeType === 'instance') {
         setSounds(data.instanceSounds);
@@ -243,9 +242,7 @@ export function SoundboardManagerPanel({
 
   const descriptionKey = scopeType === 'instance'
     ? 'soundboard.managerInstanceDesc'
-    : scopeType === 'space'
-      ? 'soundboard.managerSpaceDesc'
-      : 'soundboard.managerDmDesc';
+    : 'soundboard.managerSpaceDesc';
 
   const isLimitReached = scopeType !== 'instance'
     && maxSoundsPerScope !== null

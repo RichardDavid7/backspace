@@ -498,8 +498,8 @@
     "title": "Áudio",
     "description": "Configure os limites de codificação de voz e os efeitos sonoros padrão desta instância.",
     "maxSoundboardPerScope": {
-      "label": "Máximo de efeitos por servidor / grupo",
-      "description": "Limite de áudios personalizados que cada servidor ou grupo pode enviar (0 desativa envios personalizados)."
+      "label": "Máximo de efeitos por espaço",
+      "description": "Limite de áudios personalizados que cada espaço pode enviar (0 desativa envios personalizados)."
     }
   }
 }

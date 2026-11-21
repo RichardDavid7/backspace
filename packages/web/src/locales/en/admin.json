@@ -483,8 +483,8 @@
     "title": "Audio",
     "description": "Configure voice audio encoding limits and default soundboard clips for this instance.",
     "maxSoundboardPerScope": {
-      "label": "Max custom sounds per space / group",
-      "description": "Limit how many soundboard clips each space or group DM can upload (0 disables custom uploads)."
+      "label": "Max custom sounds per space",
+      "description": "Limit how many soundboard clips each space can upload (0 disables custom uploads)."
     }
   }
 }

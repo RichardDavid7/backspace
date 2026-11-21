@@ -285,7 +285,6 @@
   },
   "soundboard": {
     "title": "Efeitos Sonoros",
-    "manage": "Gerenciar sons",
     "close": "Fechar",
     "muteAll": "Silenciar efeitos sonoros",
     "unmuteAll": "Ativar efeitos sonoros",
@@ -295,8 +294,7 @@
     "loading": "Carregando sons…",
     "loadFailed": "Não foi possível carregar os efeitos sonoros.",
     "instanceSection": "Padrões da Instância",
-    "spaceSection": "Sons do Servidor",
-    "dmSection": "Sons do Grupo",
+    "spaceSection": "Sons do Espaço",
     "emptyScope": "Nenhum som adicionado ainda.",
     "addButton": "Adicionar",
     "addTitle": "Adicionar Som",
@@ -338,10 +336,9 @@
     "searchPlaceholder": "Buscar sons ou pastas…",
     "addToFolder": "Adicionar som em {{folder}}",
     "managerInstanceDesc": "Sons padrão disponíveis para todos nesta instância.",
-    "managerSpaceDesc": "Sons personalizados compartilhados com os membros deste servidor.",
-    "managerDmDesc": "Sons personalizados compartilhados com os membros deste grupo.",
+    "managerSpaceDesc": "Sons personalizados compartilhados com os membros deste espaço.",
     "slotUsage": "{{current}} de {{max}}",
     "limitReached": "Este espaço atingiu o limite de efeitos sonoros da instância.",
-    "disabledByInstance": "Efeitos sonoros personalizados em servidores e grupos estão desativados pela instância."
+    "disabledByInstance": "Efeitos sonoros personalizados em espaços estão desativados pela instância."
   }
 }

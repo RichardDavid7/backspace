@@ -6,7 +6,7 @@ import { getApiForOrigin, getMyUserIdForOrigin, useSpaceStore } from '../../stor
 import { useUIStore } from '../../stores/uiStore';
 import { AudioManager } from '../../audio/AudioManager';
 import { getActiveRoom } from '../../hooks/useLiveKit';
-import { dmCallChannelId, voiceSessionOrigin } from '../../utils/dmCall';
+import { voiceSessionOrigin } from '../../utils/dmCall';
 import { encodeSoundboardPlay } from '../../utils/soundboardProtocol';
 
 interface SoundboardPopoverProps {
@@ -30,8 +30,7 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   const channelToSpaceMap = useSpaceStore((s) => s.channelToSpaceMap);
 
   const origin = voiceSessionOrigin(useVoiceStore.getState());
-  const dmChannelId = activeDmCall ? dmCallChannelId(activeDmCall) : null;
-  const spaceId = !dmChannelId && currentVoiceChannelId
+  const spaceId = !activeDmCall && currentVoiceChannelId
     ? (channelToSpaceMap.get(currentVoiceChannelId) ?? null)
     : null;
 
@@ -48,7 +47,6 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       const client = getApiForOrigin(origin);
       const data = await client.soundboard.list({
         spaceId: spaceId ?? undefined,
-        dmChannelId: dmChannelId ?? undefined,
       });
       setInstanceSounds(data.instanceSounds);
       setScopeSounds(data.scopedSounds);
@@ -57,7 +55,7 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     } finally {
       setLoading(false);
     }
-  }, [origin, spaceId, dmChannelId, addToast, t]);
+  }, [origin, spaceId, addToast, t]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -66,12 +64,6 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
 
   if (!isOpen) return null;
 
-  const activeScopeType: SoundboardScopeType | null = spaceId
-    ? 'space'
-    : dmChannelId
-      ? 'dm'
-      : null;
-  const activeScopeId = spaceId ?? dmChannelId ?? null;
   const totalSoundCount = instanceSounds.length + scopeSounds.length;
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -317,11 +309,11 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           </div>
         ) : (
           <>
-            {activeScopeType && activeScopeId && renderSection(
-              activeScopeType === 'space' ? t('soundboard.spaceSection') : t('soundboard.dmSection'),
+            {spaceId && renderSection(
+              t('soundboard.spaceSection'),
               scopeSounds,
-              activeScopeType,
-              activeScopeId,
+              'space',
+              spaceId,
             )}
 
             {renderSection(

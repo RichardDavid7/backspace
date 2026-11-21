@@ -283,7 +283,6 @@
   },
   "soundboard": {
     "title": "Soundboard-Effekte",
-    "manage": "Sounds verwalten",
     "close": "Schließen",
     "muteAll": "Soundboard stummschalten",
     "unmuteAll": "Soundboard aktivieren",
@@ -294,7 +293,6 @@
     "loadFailed": "Soundboard-Sounds konnten nicht geladen werden.",
     "instanceSection": "Instanz-Standards",
     "spaceSection": "Space-Sounds",
-    "dmSection": "Gruppen-Sounds",
     "emptyScope": "Noch keine Sounds hinzugefügt.",
     "addButton": "Hinzufügen",
     "addTitle": "Sound hinzufügen",
@@ -337,9 +335,8 @@
     "addToFolder": "Sound zu {{folder}} hinzufügen",
     "managerInstanceDesc": "Standard-Sounds, die allen auf dieser Instanz zur Verfügung stehen.",
     "managerSpaceDesc": "Benutzerdefinierte Sounds für Mitglieder dieses Spaces.",
-    "managerDmDesc": "Benutzerdefinierte Sounds für Mitglieder dieser Gruppe.",
     "slotUsage": "{{current}} von {{max}}",
     "limitReached": "Dieser Bereich hat das Instanzlimit für eigene Sounds erreicht.",
-    "disabledByInstance": "Eigene Sounds für Spaces und Gruppen sind vom Instanz-Admin deaktiviert."
+    "disabledByInstance": "Eigene Sounds für Spaces sind vom Instanz-Admin deaktiviert."
   }
 }

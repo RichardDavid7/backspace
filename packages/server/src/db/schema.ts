@@ -817,8 +817,8 @@ export const personalStickers = sqliteTable('personal_stickers', {
 
 export const soundboardSounds = sqliteTable('soundboard_sounds', {
   id: text('id').primaryKey(),
-  scopeType: text('scope_type').notNull(), // 'instance' | 'space' | 'dm'
-  scopeId: text('scope_id').notNull(),     // 'instance' | spaceId | dmChannelId
+  scopeType: text('scope_type').notNull(), // 'instance' | 'space'
+  scopeId: text('scope_id').notNull(),     // 'instance' | spaceId
   name: text('name').notNull(),
   emoji: text('emoji').notNull().default('🔊'),
   folder: text('folder'),

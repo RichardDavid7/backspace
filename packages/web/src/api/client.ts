@@ -451,7 +451,7 @@ export class BackspaceApiClient {
   };
 
   readonly soundboard: {
-    list: (params?: { spaceId?: string; dmChannelId?: string }) => Promise<SoundboardListResponse>;
+    list: (params?: { spaceId?: string }) => Promise<SoundboardListResponse>;
     create: (formData: FormData) => Promise<SoundboardSound>;
     update: (id: string, data: FormData | { name?: string; emoji?: string; folder?: string | null }) => Promise<SoundboardSound>;
     reorder: (scopeType: SoundboardScopeType, scopeId: string | null, orderedIds: string[]) => Promise<{ success: boolean }>;
@@ -595,7 +595,6 @@ export class BackspaceApiClient {
       list: (params) => {
         const qs = new URLSearchParams();
         if (params?.spaceId) qs.set('spaceId', params.spaceId);
-        if (params?.dmChannelId) qs.set('dmChannelId', params.dmChannelId);
         const suffix = qs.toString() ? `?${qs.toString()}` : '';
         return request<SoundboardListResponse>('GET', `/soundboard${suffix}`);
       },

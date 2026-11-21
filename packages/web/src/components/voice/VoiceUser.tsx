@@ -163,24 +163,11 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
           : `bg-surface-base rounded-xl ${
               isSpeaking
                 ? 'ring-[3px] ring-status-online shadow-[0_0_12px_rgba(134,239,172,0.25)]'
-                : activeSoundboard
-                  ? 'ring-[3px] ring-accent-sky shadow-[0_0_14px_rgba(56,189,248,0.3)]'
-                  : 'ring-1 ring-white/[0.06] hover:ring-white/10'
+                : 'ring-1 ring-white/[0.06] hover:ring-white/10'
             }`
       } h-full w-full`}
       onContextMenu={handleContextMenu}
     >
-      {activeSoundboard && (
-        <div
-          className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent-sky/90 text-surface-950 text-[11px] font-semibold shadow-md animate-pulse"
-          title={activeSoundboard.name}
-        >
-          <span className="w-2 h-2 rounded-full bg-white" />
-          <span>{activeSoundboard.emoji}</span>
-          <span className="max-w-[110px] truncate">{activeSoundboard.name}</span>
-        </div>
-      )}
-
       {hasVideo ? (
         <video
           ref={videoRef}
@@ -203,12 +190,9 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
             {isSpeaking && (
               <div className="absolute -inset-1.5 rounded-full ring-[3px] ring-status-online animate-pulse" />
             )}
-            {!isSpeaking && activeSoundboard && (
-              <div className="absolute -inset-1.5 rounded-full ring-[3px] ring-accent-sky animate-pulse" />
-            )}
             {activeSoundboard && (
               <div
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-accent-sky text-surface-950 ring-2 ring-surface-channel flex items-center justify-center text-xs shadow"
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-surface-elevated ring-2 ring-surface-channel flex items-center justify-center text-xs shadow"
                 title={activeSoundboard.name}
               >
                 {activeSoundboard.emoji}
@@ -226,6 +210,14 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
             >
               {displayName}
             </span>
+            {hasVideo && activeSoundboard && (
+              <span
+                className="inline-flex items-center justify-center px-1 rounded bg-white/15 text-xs leading-none py-0.5"
+                title={activeSoundboard.name}
+              >
+                {activeSoundboard.emoji}
+              </span>
+            )}
             {isLocal && (
               <span className="text-[10px] text-white/40 font-medium">
                 {t('voice:badges.you')}

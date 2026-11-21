@@ -434,14 +434,38 @@ export function useLiveKit() {
   const audioStereo = useVoiceStore((s) => s.audioStereo);
   const audioBitrateAuto = useVoiceStore((s) => s.audioBitrateAuto);
   const audioBitrate = useVoiceStore((s) => s.audioBitrate);
-  const activeChannelAudioBitrate = useSpaceStore((s) => {
-    const cvId = useVoiceStore.getState().currentVoiceChannelId;
-    return cvId ? s.channels.find((c) => c.id === cvId)?.audioBitrateKbps ?? null : null;
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const [activeChannelAudio, setActiveChannelAudio] = useState<{
+    bitrate: number | null;
+    allowMusic: boolean | null;
+  }>(() => {
+    const ch = currentVoiceChannelId
+      ? useSpaceStore.getState().channels?.find((c) => c.id === currentVoiceChannelId)
+      : undefined;
+    return {
+      bitrate: ch?.audioBitrateKbps ?? null,
+      allowMusic: ch?.allowMusicMode ?? null,
+    };
   });
-  const activeChannelAllowMusic = useSpaceStore((s) => {
-    const cvId = useVoiceStore.getState().currentVoiceChannelId;
-    return cvId ? s.channels.find((c) => c.id === cvId)?.allowMusicMode ?? null : null;
-  });
+  useEffect(() => {
+    const syncChannelAudio = () => {
+      const ch = currentVoiceChannelId
+        ? useSpaceStore.getState().channels?.find((c) => c.id === currentVoiceChannelId)
+        : undefined;
+      const nextBitrate = ch?.audioBitrateKbps ?? null;
+      const nextAllowMusic = ch?.allowMusicMode ?? null;
+      setActiveChannelAudio((prev) => (
+        prev.bitrate === nextBitrate && prev.allowMusic === nextAllowMusic
+          ? prev
+          : { bitrate: nextBitrate, allowMusic: nextAllowMusic }
+      ));
+    };
+    syncChannelAudio();
+    if (typeof useSpaceStore.subscribe !== 'function') return;
+    return useSpaceStore.subscribe(syncChannelAudio);
+  }, [currentVoiceChannelId]);
+  const activeChannelAudioBitrate = activeChannelAudio.bitrate;
+  const activeChannelAllowMusic = activeChannelAudio.allowMusic;
 
   const lastMicGenRef = useRef(0);
   const lastPublishSigRef = useRef('');
