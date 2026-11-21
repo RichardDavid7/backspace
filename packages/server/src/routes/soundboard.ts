@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import '@fastify/multipart';
+import multipart from '@fastify/multipart';
 import { and, asc, eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
@@ -95,6 +95,13 @@ function resolveExtension(mimeType: string, originalFileName: string): string | 
 }
 
 export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
+  await app.register(multipart, {
+    limits: {
+      fileSize: MAX_SOUNDBOARD_BYTES,
+      files: 1,
+    },
+  });
+
   // GET /api/soundboard?spaceId=...&dmChannelId=...
   app.get<{ Querystring: { spaceId?: string; dmChannelId?: string } }>('/api/soundboard', {
     preHandler: authenticate,
