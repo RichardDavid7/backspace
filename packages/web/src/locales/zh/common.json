@@ -133,5 +133,18 @@
   "devices": {
     "newAudioInput": "检测到 {{label}}。可在语音设置中选择切换。",
     "unnamedAudioInput": "新的音频设备"
+  },
+  "statusPicker": {
+    "revertLabel": "自动恢复状态",
+    "revertsAt": "将在 {{time}} 恢复为{{status}}",
+    "viewProfile": "查看个人资料",
+    "durations": {
+      "none": "不自动恢复",
+      "15m": "15 分钟",
+      "30m": "30 分钟",
+      "1h": "1 小时",
+      "4h": "4 小时",
+      "tomorrow": "直到明天"
+    }
   }
 }

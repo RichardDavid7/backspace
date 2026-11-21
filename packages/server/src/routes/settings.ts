@@ -47,6 +47,7 @@ function rowToLimits(row: typeof schema.instanceSettings.$inferSelect): Instance
     maxAudioBitrateKbps: row.maxAudioBitrateKbps ?? 512,
     allowMusicMode: (row.allowMusicMode ?? 1) === 1,
     allowStereoAudio: (row.allowStereoAudio ?? 1) === 1,
+    soundboardEnabled: (row.soundboardEnabled ?? 1) === 1,
     maxSoundboardSoundsPerScope: row.maxSoundboardSoundsPerScope ?? 32,
     maxConcurrentSoundboardSounds: row.maxConcurrentSoundboardSounds ?? 3,
   };
@@ -240,6 +241,10 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
 
     if (body.allowStereoAudio !== undefined) {
       updateData.allowStereoAudio = body.allowStereoAudio ? 1 : 0;
+    }
+
+    if (body.soundboardEnabled !== undefined) {
+      updateData.soundboardEnabled = body.soundboardEnabled ? 1 : 0;
     }
 
     if (body.maxSoundboardSoundsPerScope !== undefined) {

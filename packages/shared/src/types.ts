@@ -312,8 +312,12 @@ export interface Channel {
   myPermissions?: string; // Computed per-user BigInt decimal string
   /** Optional per-voice-channel target Opus bitrate in kbps (`null` = instance default). */
   audioBitrateKbps?: number | null;
+  /** Optional per-voice-channel maximum Opus bitrate cap in kbps (`null` = inherit from instance). */
+  maxAudioBitrateKbps?: number | null;
   /** Optional per-voice-channel Opus Music mode toggle (`null` = inherit from instance). */
   allowMusicMode?: boolean | null;
+  /** Optional per-voice-channel Opus Stereo toggle (`null` = inherit from instance). */
+  allowStereoAudio?: boolean | null;
 }
 
 export interface ReadState {
@@ -890,8 +894,12 @@ export interface UpdateChannelRequest {
   categoryId?: string | null;
   /** Voice channels: `null` resets to instance default. */
   audioBitrateKbps?: number | null;
+  /** Voice channels: `null` inherits instance maximum bitrate. */
+  maxAudioBitrateKbps?: number | null;
   /** Voice channels: `null` inherits instance policy. */
   allowMusicMode?: boolean | null;
+  /** Voice channels: `null` inherits instance stereo policy. */
+  allowStereoAudio?: boolean | null;
 }
 
 export interface UpdateSpaceRequest {
@@ -1205,6 +1213,8 @@ export interface InstanceStreamingLimits {
   allowMusicMode?: boolean;
   /** Whether Stereo Opus audio is permitted on this instance (default true). */
   allowStereoAudio?: boolean;
+  /** Whether the Soundboard feature is enabled on this instance (default true). */
+  soundboardEnabled?: boolean;
   /** Maximum custom soundboard clips per space (0 disables custom uploads, default 32). */
   maxSoundboardSoundsPerScope?: number;
   /** Maximum soundboard clips allowed to play simultaneously in a room (1–10, default 3). */
@@ -1232,6 +1242,7 @@ export interface SoundboardListResponse {
   scopedSounds: SoundboardSound[];
   canManageInstance: boolean;
   canManageScope: boolean;
+  soundboardEnabled?: boolean;
   maxSoundsPerScope?: number;
   maxConcurrentSounds?: number;
 }

@@ -44,21 +44,25 @@ export function VoicePanel() {
   const streamingLimits = useSettingsStore((s) => s.streamingLimits);
 
   const instanceMaxBitrate = streamingLimits?.maxAudioBitrateKbps ?? MAX_AUDIO_BITRATE_KBPS;
-  const instanceDefaultBitrate = Math.min(streamingLimits?.defaultAudioBitrateKbps ?? 64, instanceMaxBitrate);
+  const effectiveMaxBitrate = currentVoiceChannel?.maxAudioBitrateKbps != null
+    ? Math.min(currentVoiceChannel.maxAudioBitrateKbps, instanceMaxBitrate)
+    : instanceMaxBitrate;
+  const instanceDefaultBitrate = Math.min(streamingLimits?.defaultAudioBitrateKbps ?? 64, effectiveMaxBitrate);
   const instanceAllowMusic = streamingLimits?.allowMusicMode ?? true;
   const instanceAllowStereo = streamingLimits?.allowStereoAudio ?? true;
   const musicAllowed = instanceAllowMusic && (currentVoiceChannel?.allowMusicMode ?? true);
+  const stereoAllowed = instanceAllowStereo && (currentVoiceChannel?.allowStereoAudio ?? true);
   const effectiveAutoBitrate = currentVoiceChannel?.audioBitrateKbps != null
-    ? Math.min(currentVoiceChannel.audioBitrateKbps, instanceMaxBitrate)
+    ? Math.min(currentVoiceChannel.audioBitrateKbps, effectiveMaxBitrate)
     : instanceDefaultBitrate;
   const displayedBitrate = audioBitrateAuto
     ? effectiveAutoBitrate
-    : Math.min(audioBitrate, instanceMaxBitrate);
+    : Math.min(audioBitrate, effectiveMaxBitrate);
 
-  const sliderSpan = Math.max(1, instanceMaxBitrate - MIN_AUDIO_BITRATE_KBPS);
+  const sliderSpan = Math.max(1, effectiveMaxBitrate - MIN_AUDIO_BITRATE_KBPS);
   const bitratePercent = ((displayedBitrate - MIN_AUDIO_BITRATE_KBPS) / sliderSpan) * 100;
-  const bitrateTicks = [MIN_AUDIO_BITRATE_KBPS, 128, 256, 384, instanceMaxBitrate]
-    .filter((v, i, arr) => v >= MIN_AUDIO_BITRATE_KBPS && v <= instanceMaxBitrate && arr.indexOf(v) === i);
+  const bitrateTicks = [MIN_AUDIO_BITRATE_KBPS, 128, 256, 384, effectiveMaxBitrate]
+    .filter((v, i, arr) => v >= MIN_AUDIO_BITRATE_KBPS && v <= effectiveMaxBitrate && arr.indexOf(v) === i);
   const bitrateNotice =
     displayedBitrate < 32
       ? { text: t('settings:voice.opus.bitrate.warningLow'), tone: 'text-accent-amber' }
@@ -179,15 +183,15 @@ export function VoicePanel() {
             <div className="flex-1 mr-4">
               <div className="text-sm text-txt-primary">{t('settings:voice.opus.stereo.label')}</div>
               <div className="text-xs text-txt-tertiary">
-                {instanceAllowStereo
+                {stereoAllowed
                   ? t('settings:voice.opus.stereo.description')
                   : t('settings:voice.opus.stereo.disabledByInstance')}
               </div>
             </div>
             <Toggle
-              enabled={instanceAllowStereo && audioStereo}
-              onChange={(v) => { if (instanceAllowStereo) setAudioStereo(v); }}
-              disabled={!instanceAllowStereo}
+              enabled={stereoAllowed && audioStereo}
+              onChange={(v) => { if (stereoAllowed) setAudioStereo(v); }}
+              disabled={!stereoAllowed}
               ariaLabel={t('settings:voice.opus.stereo.label')}
             />
           </div>
@@ -218,7 +222,7 @@ export function VoicePanel() {
                 <input
                   type="range"
                   min={MIN_AUDIO_BITRATE_KBPS}
-                  max={instanceMaxBitrate}
+                  max={effectiveMaxBitrate}
                   step={8}
                   value={displayedBitrate}
                   onChange={(e) => setAudioBitrate(Number(e.target.value))}
@@ -234,11 +238,11 @@ export function VoicePanel() {
                     const posClass =
                       kbps === MIN_AUDIO_BITRATE_KBPS
                         ? 'left-0'
-                        : kbps === instanceMaxBitrate
+                        : kbps === effectiveMaxBitrate
                           ? 'right-0'
                           : '-translate-x-1/2';
                     const posStyle =
-                      kbps === MIN_AUDIO_BITRATE_KBPS || kbps === instanceMaxBitrate
+                      kbps === MIN_AUDIO_BITRATE_KBPS || kbps === effectiveMaxBitrate
                         ? undefined
                         : { left: `${pct}%` };
                     return (

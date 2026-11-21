@@ -489,6 +489,10 @@
     "maxConcurrentSoundboard": {
       "label": "Max simultaneous soundboard clips",
       "description": "Prevents audio flooding by limiting how many clips can play at the same time in a voice call."
+    },
+    "soundboardEnabled": {
+      "label": "Enable Soundboard",
+      "description": "Allow users to play and manage soundboard clips on this instance. Disabling hides soundboard controls everywhere."
     }
   }
 }

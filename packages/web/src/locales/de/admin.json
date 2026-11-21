@@ -489,6 +489,10 @@
     "maxConcurrentSoundboard": {
       "label": "Max. gleichzeitige Soundboard-Clips",
       "description": "Verhindert Audio-Flooding, indem die Anzahl gleichzeitig abgespielter Clips in einem Sprachanruf begrenzt wird."
+    },
+    "soundboardEnabled": {
+      "label": "Soundboard aktivieren",
+      "description": "Ermöglicht das Abspielen und Verwalten von Soundboard-Clips. Beim Deaktivieren werden alle Soundboard-Schaltflächen ausgeblendet."
     }
   }
 }

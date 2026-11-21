@@ -133,5 +133,18 @@
   "devices": {
     "newAudioInput": "{{label}} detected. Choose it in Voice settings to switch.",
     "unnamedAudioInput": "New audio device"
+  },
+  "statusPicker": {
+    "revertLabel": "Revert automatically",
+    "revertsAt": "Returns to {{status}} at {{time}}",
+    "viewProfile": "View profile",
+    "durations": {
+      "none": "Manual",
+      "15m": "15 min",
+      "30m": "30 min",
+      "1h": "1 hour",
+      "4h": "4 hours",
+      "tomorrow": "Tomorrow"
+    }
   }
 }

@@ -79,6 +79,16 @@
           "label": "Allow Opus Music mode",
           "description": "Allows participants in this channel to use Music mode.",
           "disabledByInstance": "Music mode is disabled at the instance level."
+        },
+        "autoMaxBitrate": {
+          "label": "Use instance max bitrate",
+          "description": "Currently {{kbps}} kbps. Disable to set a lower maximum bitrate cap for this voice channel."
+        },
+        "maxBitrateLabel": "Channel max bitrate",
+        "allowStereoAudio": {
+          "label": "Allow Stereo audio",
+          "description": "Allow participants in this channel to transmit 2-channel stereo Opus audio.",
+          "disabledByInstance": "Stereo audio is disabled in the instance settings."
         }
       }
     },
@@ -469,7 +479,8 @@
       "moveMembers": "Move Members",
       "stream": "Stream",
       "disconnectMembers": "Disconnect Members",
-      "mentionEveryone": "Mention @everyone, @here and Roles"
+      "mentionEveryone": "Mention @everyone, @here and Roles",
+      "useSoundboard": "Use Soundboard"
     },
     "tristate": {
       "deny": "Deny",

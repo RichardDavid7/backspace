@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { ConnectionInfoPopover } from './ConnectionInfoPopover';
 import { SoundboardPopover } from './SoundboardPopover';
@@ -39,10 +40,12 @@ export function VoiceControls() {
   const activeDmCall = useVoiceStore((s) => s.activeDmCall);
   const channelPerms = useSpaceStore((s) => currentVoiceChannelId ? s.channelPermissions.get(currentVoiceChannelId) : undefined);
 
-  // In DM calls, all permissions are granted; in space channels, check SPEAK and STREAM
+  // In DM calls, all permissions are granted; in space channels, check SPEAK, STREAM and USE_SOUNDBOARD
   const isDmCall = !!activeDmCall;
   const canSpeak = isDmCall || hasPermissionBit(channelPerms, PermissionBits.SPEAK);
   const canStream = isDmCall || hasPermissionBit(channelPerms, PermissionBits.STREAM);
+  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const canUseSoundboard = soundboardEnabled && (isDmCall || hasPermissionBit(channelPerms, PermissionBits.USE_SOUNDBOARD));
 
   // A share that ends outside the menu (OS "Stop sharing" bar, track loss,
   // keybind) must not leave a stale settings popover anchored to the button.
@@ -179,7 +182,7 @@ export function VoiceControls() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           {voiceConnectionStatus === 'disconnected' && connectionError && (
             <button
               onClick={handleRetry}
@@ -188,33 +191,6 @@ export function VoiceControls() {
               {t('voice:status.retry')}
             </button>
           )}
-          <button
-            ref={soundboardBtnRef}
-            onClick={() => {
-              setShowSoundboard((open) => {
-                const next = !open;
-                if (next) {
-                  setShowConnectionInfo(false);
-                  setShowShareMenu(false);
-                }
-                return next;
-              });
-            }}
-            className={`w-7 h-7 flex items-center justify-center transition-colors rounded ${
-              showSoundboard
-                ? 'bg-accent-primary/20 text-accent-primary'
-                : soundboardMuted
-                  ? 'text-txt-tertiary/60 hover:text-txt-primary hover:bg-interactive-hover'
-                  : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover'
-            }`}
-            title={t('voice:soundboard.title')}
-            aria-haspopup="dialog"
-            aria-expanded={showSoundboard}
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-            </svg>
-          </button>
           <button
             onClick={handleDisconnect}
             className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors rounded"
@@ -232,24 +208,9 @@ export function VoiceControls() {
           onClose={() => setShowConnectionInfo(false)}
           anchorRef={connectionBtnRef}
         />
-
-        {/* Soundboard Popover (portaled above the sidebar) */}
-        {showSoundboard && soundboardAnchor && createPortal(
-          <div
-            ref={soundboardPopoverRef}
-            className="fixed z-40"
-            style={{ left: soundboardAnchor.left, bottom: soundboardAnchor.bottom }}
-          >
-            <SoundboardPopover
-              isOpen={showSoundboard}
-              onClose={() => setShowSoundboard(false)}
-            />
-          </div>,
-          document.body,
-        )}
       </div>
 
-      {/* Row 2: Camera, Screen Share, Noise Suppression */}
+      {/* Row 2: Camera, Screen Share, Noise Suppression, Soundboard */}
       <div className="relative flex items-center gap-1 px-3 pb-2 pt-1">
         {canSpeak && (
           <button
@@ -323,6 +284,52 @@ export function VoiceControls() {
             )}
           </svg>
         </button>
+
+        {/* Soundboard */}
+        {canUseSoundboard && (
+          <button
+            ref={soundboardBtnRef}
+            onClick={() => {
+              setShowSoundboard((open) => {
+                const next = !open;
+                if (next) {
+                  setShowConnectionInfo(false);
+                  setShowShareMenu(false);
+                }
+                return next;
+              });
+            }}
+            className={`${btnBase} ${
+              showSoundboard
+                ? 'bg-surface-base text-accent-primary hover:bg-surface-channel'
+                : soundboardMuted
+                  ? `${btnDefaultStyle} opacity-60`
+                  : btnDefaultStyle
+            }`}
+            title={t('voice:soundboard.title')}
+            aria-haspopup="dialog"
+            aria-expanded={showSoundboard}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Soundboard Popover (portaled above the sidebar) */}
+        {canUseSoundboard && showSoundboard && soundboardAnchor && createPortal(
+          <div
+            ref={soundboardPopoverRef}
+            className="fixed z-40"
+            style={{ left: soundboardAnchor.left, bottom: soundboardAnchor.bottom }}
+          >
+            <SoundboardPopover
+              isOpen={showSoundboard}
+              onClose={() => setShowSoundboard(false)}
+            />
+          </div>,
+          document.body,
+        )}
 
         {/* Screen share menu — quality settings + stop, anchored to the share button */}
         <ScreenShareSettingsPopover

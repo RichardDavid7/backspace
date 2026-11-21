@@ -11,7 +11,8 @@ import { useInstanceStore } from '../../stores/instanceStore';
 import { VoiceChannel } from '../voice/VoiceChannel';
 import { VoiceControls } from '../voice/VoiceControls';
 import { useVoiceStore } from '../../stores/voiceStore';
-import { ProfileAvatar } from '../ui/ProfileAvatar';
+import { Avatar } from '../ui/Avatar';
+import { StatusPickerPopover, useStatusRevertBootstrap } from '../ui/StatusPickerPopover';
 import { Mascot } from '../ui/Mascot';
 import { wsSend } from '../../hooks/useWebSocket';
 import { AudioManager } from '../../audio/AudioManager';
@@ -878,6 +879,9 @@ function UserAreaPanel({
 }) {
   const { t } = useTranslation(['spaces', 'common', 'admin']);
   const [openPanel, setOpenPanel] = useState<'input' | 'output' | null>(null);
+  const [statusPickerOpen, setStatusPickerOpen] = useState(false);
+  const profileBoxRef = useRef<HTMLButtonElement>(null);
+  useStatusRevertBootstrap();
   const inputDeviceId = useVoiceStore((s) => s.inputDeviceId);
   const outputDeviceId = useVoiceStore((s) => s.outputDeviceId);
   const setInputDevice = useVoiceStore((s) => s.setInputDevice);
@@ -1177,14 +1181,30 @@ function UserAreaPanel({
 
       {/* User area bar */}
       <div className="h-[52px] px-2 flex items-center select-none">
-        {/* Avatar + name */}
-        <div className="p-1 hover:bg-interactive-hover rounded-[4px] flex items-center gap-2 flex-1 min-w-0 cursor-pointer transition-colors group">
-          <ProfileAvatar src={user.avatar} name={user.displayName ?? user.username} size={34} status={shownStatus} user={user} origin="" />
+        {/* Avatar + name — clicking anywhere on the box opens the quick status & profile popover */}
+        <button
+          ref={profileBoxRef}
+          type="button"
+          onClick={() => {
+            setOpenPanel(null);
+            setStatusPickerOpen((v) => !v);
+          }}
+          aria-haspopup="dialog"
+          aria-expanded={statusPickerOpen}
+          className="p-1 hover:bg-interactive-hover rounded-[4px] flex items-center gap-2 flex-1 min-w-0 cursor-pointer transition-colors group text-left"
+        >
+          <Avatar src={user.avatar} name={user.displayName ?? user.username} size={34} status={shownStatus} user={user} />
           <div className="flex-1 min-w-0">
             <div className="text-[13.5px] font-semibold text-txt-primary truncate leading-tight">{user.displayName ?? user.username}</div>
             <div className="text-[11px] text-txt-tertiary truncate leading-tight group-hover:text-txt-secondary">@{user.username}</div>
           </div>
-        </div>
+        </button>
+        <StatusPickerPopover
+          open={statusPickerOpen}
+          onClose={() => setStatusPickerOpen(false)}
+          anchorRef={profileBoxRef}
+          user={user}
+        />
 
         {/* Controls */}
         <div className="flex items-center">

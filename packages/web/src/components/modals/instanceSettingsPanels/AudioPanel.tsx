@@ -41,6 +41,7 @@ export function AudioPanel() {
       || draft.allowStereoAudio !== limits.allowStereoAudio
       || draft.defaultAudioBitrateKbps !== limits.defaultAudioBitrateKbps
       || draft.maxAudioBitrateKbps !== limits.maxAudioBitrateKbps
+      || (draft.soundboardEnabled ?? true) !== (limits.soundboardEnabled ?? true)
       || (draft.maxSoundboardSoundsPerScope ?? 32) !== (limits.maxSoundboardSoundsPerScope ?? 32)
       || (draft.maxConcurrentSoundboardSounds ?? 3) !== (limits.maxConcurrentSoundboardSounds ?? 3)
     ),
@@ -194,7 +195,20 @@ export function AudioPanel() {
       <div className="border-t border-white/[0.04] pt-5 space-y-4">
         {draft && (
           <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-4">
-            <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-txt-primary">{t('admin:audio.soundboardEnabled.label')}</div>
+                <div className="text-xs text-txt-tertiary">{t('admin:audio.soundboardEnabled.description')}</div>
+              </div>
+              <Toggle
+                enabled={draft.soundboardEnabled ?? true}
+                onChange={(enabled) => setDraft({ ...draft, soundboardEnabled: enabled })}
+              />
+            </div>
+
+            {(draft.soundboardEnabled ?? true) && (
+              <>
+            <div className="border-t border-white/[0.04] pt-4 space-y-2.5">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-txt-primary">{t('admin:audio.maxSoundboardPerScope.label')}</div>
@@ -273,9 +287,13 @@ export function AudioPanel() {
                 }}
               />
             </div>
+              </>
+            )}
           </div>
         )}
-        <SoundboardManagerPanel scopeType="instance" scopeId={null} origin="" embedded />
+        {(draft?.soundboardEnabled ?? true) && (
+          <SoundboardManagerPanel scopeType="instance" scopeId={null} origin="" embedded />
+        )}
       </div>
 
       {/* Save / Reset for Opus settings */}

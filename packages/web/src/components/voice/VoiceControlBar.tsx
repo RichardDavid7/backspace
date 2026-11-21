@@ -4,6 +4,7 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from '../../stores/spaceStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { SoundboardPopover } from './SoundboardPopover';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
@@ -45,6 +46,8 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
   const isDmCall = !!activeDmCall;
   const canSpeak = isDmCall || hasPermissionBit(channelPerms, PermissionBits.SPEAK);
   const canStream = isDmCall || hasPermissionBit(channelPerms, PermissionBits.STREAM);
+  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const canUseSoundboard = soundboardEnabled && (isDmCall || hasPermissionBit(channelPerms, PermissionBits.USE_SOUNDBOARD));
   // The screen-share button is the single entry point to stream settings:
   // idle → opens the OS/Electron source picker; live → opens the settings
   // popover (quality controls + the red stop action).
@@ -209,7 +212,7 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
         <div className="w-[1px] h-6 bg-white/10 mx-0.5" />
 
         {/* Soundboard — shown in the floating bar only in fullscreen (otherwise lives in left sidebar VoiceControls) */}
-        {voiceFullscreen && (
+        {voiceFullscreen && canUseSoundboard && (
           <div className="relative">
             <button
               onClick={() => setSoundboardOpen((open) => !open)}

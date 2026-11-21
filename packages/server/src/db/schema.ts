@@ -108,7 +108,9 @@ export const channels = sqliteTable('channels', {
   position: integer('position').default(0),
   categoryId: text('category_id'),
   audioBitrateKbps: integer('audio_bitrate_kbps'),
+  maxAudioBitrateKbps: integer('max_audio_bitrate_kbps'),
   allowMusicMode: integer('allow_music_mode'),
+  allowStereoAudio: integer('allow_stereo_audio'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_channels_space_id').on(table.spaceId),
@@ -417,6 +419,7 @@ export const instanceSettings = sqliteTable('instance_settings', {
   maxAudioBitrateKbps: integer('max_audio_bitrate_kbps').notNull().default(512),
   allowMusicMode: integer('allow_music_mode').notNull().default(1),
   allowStereoAudio: integer('allow_stereo_audio').notNull().default(1),
+  soundboardEnabled: integer('soundboard_enabled').notNull().default(1),
   maxSoundboardSoundsPerScope: integer('max_soundboard_sounds_per_scope').notNull().default(32),
   maxConcurrentSoundboardSounds: integer('max_concurrent_soundboard_sounds').notNull().default(3),
   maxUploadSizeBytes: integer('max_upload_size_bytes'),

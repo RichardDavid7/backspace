@@ -133,5 +133,18 @@
   "devices": {
     "newAudioInput": "{{label}} erkannt. Wähle es in den Sprach-Einstellungen aus, um zu wechseln.",
     "unnamedAudioInput": "Neues Audiogerät"
+  },
+  "statusPicker": {
+    "revertLabel": "Automatisch zurücksetzen",
+    "revertsAt": "Zurück zu {{status}} um {{time}}",
+    "viewProfile": "Profil ansehen",
+    "durations": {
+      "none": "Manuell",
+      "15m": "15 Min.",
+      "30m": "30 Min.",
+      "1h": "1 Std.",
+      "4h": "4 Std.",
+      "tomorrow": "Bis morgen"
+    }
   }
 }

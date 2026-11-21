@@ -79,6 +79,16 @@
           "label": "Permitir modo Música no Opus",
           "description": "Permite que participantes deste canal usem o modo Música.",
           "disabledByInstance": "O modo Música está desativado nas configurações da instância."
+        },
+        "autoMaxBitrate": {
+          "label": "Usar bitrate máximo da instância",
+          "description": "Atualmente {{kbps}} kbps. Desative para definir um teto máximo de bitrate para este canal de voz."
+        },
+        "maxBitrateLabel": "Bitrate máximo do canal",
+        "allowStereoAudio": {
+          "label": "Permitir áudio estéreo",
+          "description": "Permite que participantes deste canal transmitam áudio Opus estéreo em 2 canais.",
+          "disabledByInstance": "O áudio estéreo está desativado nas configurações da instância."
         }
       }
     },
@@ -472,7 +482,8 @@
       "moveMembers": "Mover membros",
       "stream": "Transmitir",
       "disconnectMembers": "Desconectar membros",
-      "mentionEveryone": "Mencionar @everyone, @here e cargos"
+      "mentionEveryone": "Mencionar @everyone, @here e cargos",
+      "useSoundboard": "Usar Efeitos Sonoros"
     },
     "tristate": {
       "deny": "Negar",

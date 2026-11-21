@@ -504,6 +504,10 @@
     "maxConcurrentSoundboard": {
       "label": "Máximo de efeitos simultâneos",
       "description": "Evita flood de áudio limitando quantos efeitos sonoros podem tocar ao mesmo tempo em uma chamada."
+    },
+    "soundboardEnabled": {
+      "label": "Ativar Efeitos Sonoros",
+      "description": "Permite tocar e gerenciar efeitos sonoros nesta instância. Desativar oculta os botões de efeitos em toda a interface."
     }
   }
 }

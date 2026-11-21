@@ -63,10 +63,11 @@ function isInstanceAdmin(userId: string): boolean {
   return u?.isAdmin === 1;
 }
 
-function getSoundboardLimits(): { maxSoundsPerScope: number; maxConcurrentSounds: number } {
+function getSoundboardLimits(): { soundboardEnabled: boolean; maxSoundsPerScope: number; maxConcurrentSounds: number } {
   const db = getDb();
   const row = db
     .select({
+      soundboardEnabled: schema.instanceSettings.soundboardEnabled,
       maxSoundboardSoundsPerScope: schema.instanceSettings.maxSoundboardSoundsPerScope,
       maxConcurrentSoundboardSounds: schema.instanceSettings.maxConcurrentSoundboardSounds,
     })
@@ -74,6 +75,7 @@ function getSoundboardLimits(): { maxSoundsPerScope: number; maxConcurrentSounds
     .where(eq(schema.instanceSettings.id, 1))
     .get();
   return {
+    soundboardEnabled: (row?.soundboardEnabled ?? 1) === 1,
     maxSoundsPerScope: row?.maxSoundboardSoundsPerScope ?? 32,
     maxConcurrentSounds: row?.maxConcurrentSoundboardSounds ?? 3,
   };
@@ -150,10 +152,11 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
 
     const limits = getSoundboardLimits();
     return reply.code(200).send({
-      instanceSounds: instanceRows.map(rowToSound),
-      scopedSounds: scopedRows.map(rowToSound),
+      instanceSounds: limits.soundboardEnabled ? instanceRows.map(rowToSound) : [],
+      scopedSounds: limits.soundboardEnabled ? scopedRows.map(rowToSound) : [],
       canManageInstance: isInstanceAdmin(request.userId),
-      canManageScope: scopeManageable,
+      canManageScope: scopeManageable && limits.soundboardEnabled,
+      soundboardEnabled: limits.soundboardEnabled,
       maxSoundsPerScope: limits.maxSoundsPerScope,
       maxConcurrentSounds: limits.maxConcurrentSounds,
     });
@@ -231,7 +234,10 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       .all();
 
     if (scopeType !== 'instance') {
-      const { maxSoundsPerScope } = getSoundboardLimits();
+      const { soundboardEnabled, maxSoundsPerScope } = getSoundboardLimits();
+      if (!soundboardEnabled) {
+        return sendError(reply, 403, 'forbidden');
+      }
       if (existing.length >= maxSoundsPerScope) {
         return sendError(reply, 400, 'validation_failed');
       }

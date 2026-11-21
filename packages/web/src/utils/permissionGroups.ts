@@ -52,6 +52,7 @@ export const PERMISSION_GROUPS: { id: PermissionGroupId; perms: PermDef[] }[] = 
       { bit: PermissionBits.MOVE_MEMBERS, key: 'MOVE_MEMBERS' },
       { bit: PermissionBits.DISCONNECT_MEMBERS, key: 'DISCONNECT_MEMBERS' },
       { bit: PermissionBits.STREAM, key: 'STREAM' },
+      { bit: PermissionBits.USE_SOUNDBOARD, key: 'USE_SOUNDBOARD' },
     ],
   },
 ];

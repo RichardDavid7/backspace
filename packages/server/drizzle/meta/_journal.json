@@ -239,6 +239,13 @@
       "when": 1795294200000,
       "tag": "0033_soundboard",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1795299600000,
+      "tag": "0034_channel_opus_and_soundboard_toggle",
+      "breakpoints": true
     }
   ]
 }

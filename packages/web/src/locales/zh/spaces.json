@@ -79,6 +79,16 @@
           "label": "允许 Opus 音乐模式",
           "description": "允许此频道中的参与者使用音乐模式。",
           "disabledByInstance": "实例设置已禁用音乐模式。"
+        },
+        "autoMaxBitrate": {
+          "label": "使用实例最大比特率",
+          "description": "当前为 {{kbps}} kbps。关闭后可为此语音频道设置更低的最大比特率上限。"
+        },
+        "maxBitrateLabel": "频道最大比特率",
+        "allowStereoAudio": {
+          "label": "允许立体声音频",
+          "description": "允许此频道的参与者传输双声道 Opus 立体声音频。",
+          "disabledByInstance": "实例设置中已禁用立体声音频。"
         }
       }
     },
@@ -466,7 +476,8 @@
       "moveMembers": "移动成员",
       "stream": "视频推流",
       "disconnectMembers": "断开成员连接",
-      "mentionEveryone": "提及 @everyone、@here 和身份组"
+      "mentionEveryone": "提及 @everyone、@here 和身份组",
+      "useSoundboard": "使用音效板"
     },
     "tristate": {
       "deny": "拒绝",
