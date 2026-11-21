@@ -339,6 +339,7 @@
     "managerSpaceDesc": "Sons personalizados compartilhados com os membros deste espaço.",
     "slotUsage": "{{current}} de {{max}}",
     "limitReached": "Este espaço atingiu o limite de efeitos sonoros da instância.",
-    "disabledByInstance": "Efeitos sonoros personalizados em espaços estão desativados pela instância."
+    "disabledByInstance": "Efeitos sonoros personalizados em espaços estão desativados pela instância.",
+    "previewHint": "Botão direito no som para ouvir prévia só para você"
   }
 }

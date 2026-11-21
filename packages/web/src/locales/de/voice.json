@@ -337,6 +337,7 @@
     "managerSpaceDesc": "Benutzerdefinierte Sounds für Mitglieder dieses Spaces.",
     "slotUsage": "{{current}} von {{max}}",
     "limitReached": "Dieser Bereich hat das Instanzlimit für eigene Sounds erreicht.",
-    "disabledByInstance": "Eigene Sounds für Spaces sind vom Instanz-Admin deaktiviert."
+    "disabledByInstance": "Eigene Sounds für Spaces sind vom Instanz-Admin deaktiviert.",
+    "previewHint": "Rechtsklick auf einen Sound für lokale Vorschau"
   }
 }

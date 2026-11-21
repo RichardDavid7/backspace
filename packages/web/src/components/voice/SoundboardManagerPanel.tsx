@@ -88,14 +88,25 @@ export function SoundboardManagerPanel({
   };
 
   const handlePreview = (sound: SoundboardSound) => {
+    if (playingId === sound.id) return;
     const resolvedUrl = sound.fileUrl.startsWith('/') && origin
       ? `${origin}${sound.fileUrl}`
       : sound.fileUrl;
     setPlayingId(sound.id);
-    setTimeout(() => {
-      setPlayingId((curr) => (curr === sound.id ? null : curr));
-    }, Math.max(500, Math.min(sound.durationMs || 1500, 10_000)));
-    void AudioManager.getInstance().playSoundUrl(resolvedUrl, { volume: 0.8 });
+    void AudioManager.getInstance()
+      .playSoundUrl(resolvedUrl, { volume: 0.8 })
+      .then((res) => {
+        if (!res) {
+          setPlayingId((curr) => (curr === sound.id ? null : curr));
+          return;
+        }
+        res.source.addEventListener('ended', () => {
+          setPlayingId((curr) => (curr === sound.id ? null : curr));
+        });
+      })
+      .catch(() => {
+        setPlayingId((curr) => (curr === sound.id ? null : curr));
+      });
   };
 
   const handleDelete = async (sound: SoundboardSound) => {
@@ -164,6 +175,10 @@ export function SoundboardManagerPanel({
         return (
           <div
             key={sound.id}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              handlePreview(sound);
+            }}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
               isPlaying
                 ? 'bg-accent-primary/15 border-accent-primary/50'

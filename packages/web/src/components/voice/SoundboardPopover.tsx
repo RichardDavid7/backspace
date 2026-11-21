@@ -41,6 +41,7 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   const [scopeSounds, setScopeSounds] = useState<SoundboardSound[]>([]);
   const [maxConcurrentSounds, setMaxConcurrentSounds] = useState(3);
   const [loading, setLoading] = useState(false);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
@@ -125,12 +126,39 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     }
   };
 
+  const handlePreviewOnly = (e: React.MouseEvent, sound: SoundboardSound) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (previewingId === sound.id) return;
+
+    const resolvedUrl = sound.fileUrl.startsWith('/') && origin
+      ? `${origin}${sound.fileUrl}`
+      : sound.fileUrl;
+
+    setPreviewingId(sound.id);
+    void AudioManager.getInstance()
+      .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 })
+      .then((res) => {
+        if (!res) {
+          setPreviewingId((curr) => (curr === sound.id ? null : curr));
+          return;
+        }
+        res.source.addEventListener('ended', () => {
+          setPreviewingId((curr) => (curr === sound.id ? null : curr));
+        });
+      })
+      .catch(() => {
+        setPreviewingId((curr) => (curr === sound.id ? null : curr));
+      });
+  };
+
   const atConcurrencyLimit = activeSoundboardClips.size >= maxConcurrentSounds;
 
   const renderSoundGrid = (items: SoundboardSound[]) => (
     <div className="grid grid-cols-2 gap-1.5">
       {items.map((sound) => {
         const isPlaying = activeSoundboardClips.has(sound.id);
+        const isPreviewing = previewingId === sound.id;
         const isBlocked = !isPlaying && atConcurrencyLimit;
         return (
           <button
@@ -138,12 +166,15 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
             type="button"
             disabled={isPlaying || isBlocked}
             onClick={() => void handlePlay(sound)}
+            onContextMenu={(e) => handlePreviewOnly(e, sound)}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors ${
               isPlaying
                 ? 'bg-accent-primary/20 border-accent-primary/60 text-txt-primary cursor-default'
-                : isBlocked
-                  ? 'bg-surface-channel border-white/[0.04] text-txt-primary opacity-45 cursor-not-allowed'
-                  : 'bg-surface-channel border-white/[0.06] hover:bg-interactive-hover hover:border-white/10 text-txt-primary cursor-pointer'
+                : isPreviewing
+                  ? 'bg-surface-elevated border-white/25 text-txt-primary cursor-pointer'
+                  : isBlocked
+                    ? 'bg-surface-channel border-white/[0.04] text-txt-primary opacity-45 cursor-not-allowed'
+                    : 'bg-surface-channel border-white/[0.06] hover:bg-interactive-hover hover:border-white/10 text-txt-primary cursor-pointer'
             }`}
             title={sound.name}
           >
@@ -345,6 +376,13 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           </>
         )}
       </div>
+
+      {/* Subtle footer hint for local right-click preview */}
+      {totalSoundCount > 0 && (
+        <div className="pt-1.5 border-t border-white/[0.05] text-[10px] text-txt-tertiary/80 text-center select-none">
+          {t('soundboard.previewHint')}
+        </div>
+      )}
     </div>
   );
 }
