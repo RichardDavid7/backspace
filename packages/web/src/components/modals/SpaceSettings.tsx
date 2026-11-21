@@ -689,11 +689,11 @@ export function SpaceSettingsModal() {
             {canManageSpace && (
               <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
             )}
-            <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
 
             <div className="border-t border-white/[0.04] my-2 mx-2" />
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
             <button onClick={() => handleTabClick('members')} className={tabClass('members')}>{t('common:labels.members')}</button>
+            <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
             {canManageRoles && (
               <button onClick={() => handleTabClick('roles')} className={tabClass('roles')}>{t('spaces:settings.nav.tabs.roles')}</button>
             )}
@@ -727,11 +727,11 @@ export function SpaceSettingsModal() {
               {canManageSpace && (
                 <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
               )}
-              <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
 
               <div className="border-t border-white/[0.04] my-2 mx-2" />
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
               <button onClick={() => handleTabClick('members')} className={tabClass('members')}>{t('common:labels.members')}</button>
+              <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
               {canManageRoles && (
                 <button onClick={() => handleTabClick('roles')} className={tabClass('roles')}>{t('spaces:settings.nav.tabs.roles')}</button>
               )}
