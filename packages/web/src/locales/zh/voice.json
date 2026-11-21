@@ -327,6 +327,11 @@
     "deletedToast": "音效已删除。",
     "saveFailed": "无法保存音效。",
     "deleteFailed": "无法删除音效。",
-    "reorderFailed": "无法调整音效顺序。"
+    "reorderFailed": "无法调整音效顺序。",
+    "folderLabel": "文件夹（可选）",
+    "folderPlaceholder": "梗图、反应、游戏…",
+    "noFolder": "无文件夹",
+    "searchPlaceholder": "搜索音效或文件夹…",
+    "addToFolder": "添加音效到 {{folder}}"
   }
 }

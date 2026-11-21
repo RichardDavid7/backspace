@@ -820,6 +820,7 @@ export const soundboardSounds = sqliteTable('soundboard_sounds', {
   scopeId: text('scope_id').notNull(),     // 'instance' | spaceId | dmChannelId
   name: text('name').notNull(),
   emoji: text('emoji').notNull().default('🔊'),
+  folder: text('folder'),
   fileName: text('file_name').notNull(),
   mimeType: text('mime_type').notNull(),
   durationMs: integer('duration_ms').notNull().default(0),

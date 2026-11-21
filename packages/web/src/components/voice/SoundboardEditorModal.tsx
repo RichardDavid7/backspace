@@ -20,6 +20,8 @@ interface SoundboardEditorModalProps {
   scopeId: string | null;
   origin: string;
   initialSound?: SoundboardSound | null;
+  defaultFolder?: string | null;
+  existingFolders?: string[];
   onClose: () => void;
   onSaved: (sound: SoundboardSound) => void;
 }
@@ -30,6 +32,8 @@ export function SoundboardEditorModal({
   scopeId,
   origin,
   initialSound,
+  defaultFolder = null,
+  existingFolders = [],
   onClose,
   onSaved,
 }: SoundboardEditorModalProps) {
@@ -38,6 +42,7 @@ export function SoundboardEditorModal({
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🔊');
+  const [folder, setFolder] = useState('');
   const [normalize, setNormalize] = useState(true);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [startSec, setStartSec] = useState(0);
@@ -75,6 +80,7 @@ export function SoundboardEditorModal({
     if (initialSound) {
       setName(initialSound.name);
       setEmoji(initialSound.emoji || '🔊');
+      setFolder(initialSound.folder ?? '');
       setNormalize(false);
       setAudioBuffer(null);
       setStartSec(0);
@@ -113,12 +119,13 @@ export function SoundboardEditorModal({
     } else {
       setName('');
       setEmoji('🔊');
+      setFolder(defaultFolder ?? '');
       setNormalize(true);
       setAudioBuffer(null);
       setStartSec(0);
       setEndSec(0);
     }
-  }, [isOpen, initialSound, origin, t]);
+  }, [isOpen, initialSound, defaultFolder, origin, t]);
 
   useEffect(() => {
     return () => {
@@ -250,11 +257,13 @@ export function SoundboardEditorModal({
     try {
       const client = getApiForOrigin(origin);
       const safeEmoji = emoji.trim() || '🔊';
+      const normalizedFolder = folder.trim().slice(0, 32) || null;
 
       if (initialSound && !audioDirty) {
         const updated = await client.soundboard.update(initialSound.id, {
           name: trimmedName,
           emoji: safeEmoji,
+          folder: normalizedFolder,
         });
         onSaved(updated);
         onClose();
@@ -277,6 +286,7 @@ export function SoundboardEditorModal({
       const formData = new FormData();
       formData.append('name', trimmedName);
       formData.append('emoji', safeEmoji);
+      formData.append('folder', normalizedFolder ?? '');
       formData.append('durationMs', String(durationMs));
       if (!initialSound) {
         formData.append('scopeType', scopeType);
@@ -374,6 +384,50 @@ export function SoundboardEditorModal({
               {item}
             </button>
           ))}
+        </div>
+
+        {/* Folder (optional) */}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-text-secondary">
+            {t('soundboard.folderLabel')}
+          </label>
+          <input
+            type="text"
+            value={folder}
+            maxLength={32}
+            placeholder={t('soundboard.folderPlaceholder')}
+            onChange={(e) => setFolder(e.target.value)}
+            className="w-full h-9 px-3 rounded-xl bg-surface-900/70 border border-surface-700/60 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-sky"
+          />
+          {existingFolders.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              <button
+                type="button"
+                onClick={() => setFolder('')}
+                className={`px-2 py-0.5 rounded-md text-[11px] transition-colors cursor-pointer ${
+                  folder.trim() === ''
+                    ? 'bg-accent-sky/25 text-accent-sky ring-1 ring-accent-sky/60'
+                    : 'bg-surface-800/60 text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {t('soundboard.noFolder')}
+              </button>
+              {existingFolders.map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFolder(f)}
+                  className={`px-2 py-0.5 rounded-md text-[11px] transition-colors cursor-pointer ${
+                    folder.trim() === f
+                      ? 'bg-accent-sky/25 text-accent-sky ring-1 ring-accent-sky/60'
+                      : 'bg-surface-800/60 text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Audio File Picker */}

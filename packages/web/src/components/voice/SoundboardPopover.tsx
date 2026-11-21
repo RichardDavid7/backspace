@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SoundboardScopeType, SoundboardSound } from '@backspace/shared';
 import { useVoiceStore } from '../../stores/voiceStore';
@@ -20,6 +20,20 @@ interface EditorState {
   scopeType: SoundboardScopeType;
   scopeId: string | null;
   sound: SoundboardSound | null;
+  defaultFolder: string | null;
+}
+
+function extractFolderNames(sounds: SoundboardSound[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const s of sounds) {
+    const f = s.folder?.trim();
+    if (f && !seen.has(f)) {
+      seen.add(f);
+      result.push(f);
+    }
+  }
+  return result;
 }
 
 export function SoundboardPopover({ isOpen, onClose, className = '' }: SoundboardPopoverProps) {
@@ -50,6 +64,8 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   const [manageMode, setManageMode] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
   const fetchSounds = useCallback(async () => {
     setLoading(true);
@@ -75,6 +91,9 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     void fetchSounds();
   }, [isOpen, fetchSounds]);
 
+  const instanceFolders = useMemo(() => extractFolderNames(instanceSounds), [instanceSounds]);
+  const scopeFolders = useMemo(() => extractFolderNames(scopeSounds), [scopeSounds]);
+
   if (!isOpen) return null;
 
   const activeScopeType: SoundboardScopeType | null = spaceId
@@ -83,6 +102,17 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       ? 'dm'
       : null;
   const activeScopeId = spaceId ?? dmChannelId ?? null;
+  const totalSoundCount = instanceSounds.length + scopeSounds.length;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const toggleFolder = (folderKey: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderKey)) next.delete(folderKey);
+      else next.add(folderKey);
+      return next;
+    });
+  };
 
   const handlePlay = async (sound: SoundboardSound) => {
     const resolvedUrl = sound.fileUrl.startsWith('/') && origin
@@ -134,20 +164,33 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     }
   };
 
-  const handleMove = async (
-    list: SoundboardSound[],
+  const handleMoveInGroup = async (
+    fullList: SoundboardSound[],
     setList: React.Dispatch<React.SetStateAction<SoundboardSound[]>>,
     scopeType: SoundboardScopeType,
     scopeIdVal: string | null,
-    index: number,
+    soundId: string,
+    groupFolder: string | null,
     direction: -1 | 1,
   ) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= list.length) return;
-    const next = [...list];
-    const [moved] = next.splice(index, 1);
-    if (!moved) return;
-    next.splice(targetIndex, 0, moved);
+    const groupIndices: number[] = [];
+    fullList.forEach((s, i) => {
+      if ((s.folder?.trim() || null) === groupFolder) groupIndices.push(i);
+    });
+    const posInGroup = groupIndices.findIndex((idx) => fullList[idx]?.id === soundId);
+    const targetPosInGroup = posInGroup + direction;
+    if (posInGroup < 0 || targetPosInGroup < 0 || targetPosInGroup >= groupIndices.length) return;
+
+    const fromIdx = groupIndices[posInGroup]!;
+    const toIdx = groupIndices[targetPosInGroup]!;
+    const fromItem = fullList[fromIdx];
+    const toItem = fullList[toIdx];
+    if (!fromItem || !toItem) return;
+    const next = fullList.map((item, i) => {
+      if (i === fromIdx) return toItem;
+      if (i === toIdx) return fromItem;
+      return item;
+    });
     setList(next);
 
     try {
@@ -158,11 +201,99 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
         next.map((s) => s.id),
       );
     } catch {
-      // revert on failure
-      setList(list);
+      setList(fullList);
       addToast(t('soundboard.reorderFailed'), 'warning');
     }
   };
+
+  const renderSoundGrid = (
+    items: SoundboardSound[],
+    fullList: SoundboardSound[],
+    setList: React.Dispatch<React.SetStateAction<SoundboardSound[]>>,
+    scopeType: SoundboardScopeType,
+    scopeIdVal: string | null,
+    groupFolder: string | null,
+    canManage: boolean,
+  ) => (
+    <div className="grid grid-cols-2 gap-1.5">
+      {items.map((sound, idx) => {
+        const isPlaying = playingId === sound.id;
+        return (
+          <div
+            key={sound.id}
+            className={`group relative rounded-xl border transition-all ${
+              isPlaying
+                ? 'bg-accent-sky/20 border-accent-sky/70 shadow-sm shadow-accent-sky/20'
+                : 'bg-surface-900/55 border-surface-700/50 hover:bg-surface-800/75 hover:border-surface-600/80'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => void handlePlay(sound)}
+              className="w-full flex items-center gap-2 px-2.5 py-2 text-left cursor-pointer"
+              title={sound.name}
+            >
+              <span className="text-base shrink-0 leading-none">{sound.emoji}</span>
+              <span className="text-xs font-medium text-text-primary truncate flex-1">
+                {sound.name}
+              </span>
+            </button>
+
+            {manageMode && canManage && (
+              <div className="flex items-center justify-end gap-0.5 px-1.5 pb-1.5 pt-0.5 border-t border-surface-700/40">
+                <button
+                  type="button"
+                  disabled={idx === 0}
+                  onClick={() => void handleMoveInGroup(fullList, setList, scopeType, scopeIdVal, sound.id, groupFolder, -1)}
+                  className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-700/60 disabled:opacity-30 cursor-pointer"
+                  aria-label={t('soundboard.moveUp')}
+                  title={t('soundboard.moveUp')}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  disabled={idx === items.length - 1}
+                  onClick={() => void handleMoveInGroup(fullList, setList, scopeType, scopeIdVal, sound.id, groupFolder, 1)}
+                  className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-700/60 disabled:opacity-30 cursor-pointer"
+                  aria-label={t('soundboard.moveDown')}
+                  title={t('soundboard.moveDown')}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M19 12l-7 7-7-7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditor({ scopeType, scopeId: scopeIdVal, sound, defaultFolder: sound.folder })}
+                  className="p-1 rounded text-text-muted hover:text-accent-sky hover:bg-surface-700/60 cursor-pointer"
+                  aria-label={t('soundboard.edit')}
+                  title={t('soundboard.edit')}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(sound)}
+                  className="p-1 rounded text-text-muted hover:text-accent-rose hover:bg-surface-700/60 cursor-pointer"
+                  aria-label={t('soundboard.delete')}
+                  title={t('soundboard.delete')}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   const renderSection = (
     title: string,
@@ -171,114 +302,125 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     scopeType: SoundboardScopeType,
     scopeIdVal: string | null,
     canManage: boolean,
-  ) => (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-          {title}
-        </span>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => setEditor({ scopeType, scopeId: scopeIdVal, sound: null })}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent-sky/15 hover:bg-accent-sky/25 text-accent-sky text-[11px] font-medium transition-colors cursor-pointer"
-          >
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-            </svg>
-            <span>{t('soundboard.addButton')}</span>
-          </button>
+  ) => {
+    const filtered = normalizedQuery
+      ? sounds.filter((s) =>
+          s.name.toLowerCase().includes(normalizedQuery)
+          || (s.folder?.toLowerCase().includes(normalizedQuery) ?? false),
+        )
+      : sounds;
+
+    const ungrouped = filtered.filter((s) => !s.folder?.trim());
+    const folderMap = new Map<string, SoundboardSound[]>();
+    for (const s of filtered) {
+      const f = s.folder?.trim();
+      if (!f) continue;
+      folderMap.set(f, [...(folderMap.get(f) ?? []), s]);
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            {title}
+          </span>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setEditor({ scopeType, scopeId: scopeIdVal, sound: null, defaultFolder: null })}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent-sky/15 hover:bg-accent-sky/25 text-accent-sky text-[11px] font-medium transition-colors cursor-pointer"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+              </svg>
+              <span>{t('soundboard.addButton')}</span>
+            </button>
+          )}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="text-xs text-text-muted py-3 px-2 text-center rounded-xl bg-surface-900/40 border border-surface-700/40">
+            {t('soundboard.emptyScope')}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {ungrouped.length > 0 && renderSoundGrid(
+              ungrouped,
+              sounds,
+              setSounds,
+              scopeType,
+              scopeIdVal,
+              null,
+              canManage,
+            )}
+
+            {Array.from(folderMap.entries()).map(([folderName, folderSounds]) => {
+              const folderKey = `${scopeType}:${scopeIdVal ?? 'instance'}:${folderName}`;
+              const isCollapsed = !normalizedQuery && collapsedFolders.has(folderKey);
+              return (
+                <div
+                  key={folderKey}
+                  className="rounded-xl bg-surface-900/35 border border-surface-700/45 p-2 space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleFolder(folderKey)}
+                      className="flex items-center gap-1.5 min-w-0 flex-1 text-left text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+                    >
+                      <svg
+                        className={`w-3.5 h-3.5 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                      </svg>
+                      <svg className="w-3.5 h-3.5 shrink-0 text-accent-sky/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                      </svg>
+                      <span className="truncate">{folderName}</span>
+                      <span className="text-[10px] text-text-muted shrink-0">
+                        {folderSounds.length}
+                      </span>
+                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => setEditor({ scopeType, scopeId: scopeIdVal, sound: null, defaultFolder: folderName })}
+                        className="p-1 rounded text-text-muted hover:text-accent-sky hover:bg-surface-700/50 transition-colors cursor-pointer"
+                        aria-label={t('soundboard.addToFolder', { folder: folderName })}
+                        title={t('soundboard.addToFolder', { folder: folderName })}
+                      >
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {!isCollapsed && renderSoundGrid(
+                    folderSounds,
+                    sounds,
+                    setSounds,
+                    scopeType,
+                    scopeIdVal,
+                    folderName,
+                    canManage,
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
-
-      {sounds.length === 0 ? (
-        <div className="text-xs text-text-muted py-3 px-2 text-center rounded-xl bg-surface-900/40 border border-surface-700/40">
-          {t('soundboard.emptyScope')}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-1.5">
-          {sounds.map((sound, idx) => {
-            const isPlaying = playingId === sound.id;
-            return (
-              <div
-                key={sound.id}
-                className={`group relative rounded-xl border transition-all ${
-                  isPlaying
-                    ? 'bg-accent-sky/20 border-accent-sky/70 shadow-sm shadow-accent-sky/20'
-                    : 'bg-surface-900/55 border-surface-700/50 hover:bg-surface-800/75 hover:border-surface-600/80'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => void handlePlay(sound)}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 text-left cursor-pointer"
-                  title={sound.name}
-                >
-                  <span className="text-base shrink-0 leading-none">{sound.emoji}</span>
-                  <span className="text-xs font-medium text-text-primary truncate flex-1">
-                    {sound.name}
-                  </span>
-                </button>
-
-                {manageMode && canManage && (
-                  <div className="flex items-center justify-end gap-0.5 px-1.5 pb-1.5 pt-0.5 border-t border-surface-700/40">
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => void handleMove(sounds, setSounds, scopeType, scopeIdVal, idx, -1)}
-                      className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-700/60 disabled:opacity-30 cursor-pointer"
-                      aria-label={t('soundboard.moveUp')}
-                      title={t('soundboard.moveUp')}
-                    >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === sounds.length - 1}
-                      onClick={() => void handleMove(sounds, setSounds, scopeType, scopeIdVal, idx, 1)}
-                      className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-700/60 disabled:opacity-30 cursor-pointer"
-                      aria-label={t('soundboard.moveDown')}
-                      title={t('soundboard.moveDown')}
-                    >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M19 12l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditor({ scopeType, scopeId: scopeIdVal, sound })}
-                      className="p-1 rounded text-text-muted hover:text-accent-sky hover:bg-surface-700/60 cursor-pointer"
-                      aria-label={t('soundboard.edit')}
-                      title={t('soundboard.edit')}
-                    >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(sound)}
-                      className="p-1 rounded text-text-muted hover:text-accent-rose hover:bg-surface-700/60 cursor-pointer"
-                      aria-label={t('soundboard.delete')}
-                      title={t('soundboard.delete')}
-                    >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   const canManageAny = canManageInstance || canManageScope;
+  const editorExistingFolders = editor?.scopeType === 'instance' ? instanceFolders : scopeFolders;
 
   return (
     <>
@@ -368,8 +510,19 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           </span>
         </div>
 
+        {/* Quick Search (shown when 5+ sounds exist) */}
+        {totalSoundCount >= 5 && (
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('soundboard.searchPlaceholder')}
+            className="w-full h-8 px-2.5 rounded-lg bg-surface-900/60 border border-surface-700/50 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-sky"
+          />
+        )}
+
         {/* Sound Sections */}
-        <div className="max-h-72 overflow-y-auto pr-0.5 space-y-4">
+        <div className="max-h-80 overflow-y-auto pr-0.5 space-y-4">
           {loading && instanceSounds.length === 0 && scopeSounds.length === 0 ? (
             <div className="py-6 text-center text-xs text-text-muted">
               {t('soundboard.loading')}
@@ -404,6 +557,8 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
         scopeId={editor?.scopeId ?? null}
         origin={origin}
         initialSound={editor?.sound ?? null}
+        defaultFolder={editor?.defaultFolder ?? null}
+        existingFolders={editorExistingFolders}
         onClose={() => setEditor(null)}
         onSaved={() => {
           void fetchSounds();

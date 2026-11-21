@@ -1215,6 +1215,7 @@ export interface SoundboardSound {
   scopeId: string;
   name: string;
   emoji: string;
+  folder: string | null;
   fileUrl: string;
   durationMs: number;
   position: number;

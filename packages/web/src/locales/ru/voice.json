@@ -333,6 +333,11 @@
     "deletedToast": "Звук удален.",
     "saveFailed": "Не удалось сохранить звук.",
     "deleteFailed": "Не удалось удалить звук.",
-    "reorderFailed": "Не удалось изменить порядок звуков."
+    "reorderFailed": "Не удалось изменить порядок звуков.",
+    "folderLabel": "Папка (необязательно)",
+    "folderPlaceholder": "Мемы, Реакции, Игры…",
+    "noFolder": "Без папки",
+    "searchPlaceholder": "Поиск звуков или папок…",
+    "addToFolder": "Добавить звук в {{folder}}"
   }
 }
