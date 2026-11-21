@@ -13,12 +13,12 @@ import { StoragePanel } from '../instanceSettingsPanels/StoragePanel';
 import { UsersPanel } from '../instanceSettingsPanels/UsersPanel';
 import { UpdatesPanel } from '../instanceSettingsPanels/UpdatesPanel';
 import { TelemetryPanel } from '../instanceSettingsPanels/TelemetryPanel';
-import { SoundboardManagerPanel } from '../../voice/SoundboardManagerPanel';
+import { AudioPanel } from '../instanceSettingsPanels/AudioPanel';
 
-type SubTab = 'general' | 'registration' | 'federation' | 'streaming' | 'soundboard' | 'storage' | 'users' | 'updates' | 'telemetry';
+type SubTab = 'general' | 'registration' | 'federation' | 'streaming' | 'audio' | 'storage' | 'users' | 'updates' | 'telemetry';
 
 export function InstancePanel() {
-  const { t } = useTranslation(['settings', 'voice']);
+  const { t } = useTranslation(['settings']);
   const fetchInstanceSettings = useSettingsStore((s) => s.fetchInstanceSettings);
   const fetchTelemetry = useSettingsStore((s) => s.fetchTelemetry);
   // Read here rather than in the telemetry panel alone: the invitation has to
@@ -35,7 +35,7 @@ export function InstancePanel() {
     { id: 'registration', label: t('settings:instance.tabs.registration') },
     { id: 'federation', label: t('settings:instance.tabs.federation'), badgeCount: approvalCount },
     { id: 'streaming', label: t('settings:instance.tabs.streaming') },
-    { id: 'soundboard', label: t('voice:soundboard.title') },
+    { id: 'audio', label: t('settings:instance.tabs.audio') },
     { id: 'storage', label: t('settings:instance.tabs.storage') },
     { id: 'users', label: t('settings:instance.tabs.users') },
     { id: 'updates', label: t('settings:instance.tabs.updates'), badgeDot: updateBadge },
@@ -73,7 +73,7 @@ export function InstancePanel() {
       {subTab === 'registration' && <RegistrationPanel />}
       {subTab === 'federation' && <FederationPanel onApprovalCountChange={setApprovalCount} />}
       {subTab === 'streaming' && <StreamingPanel />}
-      {subTab === 'soundboard' && <SoundboardManagerPanel scopeType="instance" scopeId={null} origin="" />}
+      {subTab === 'audio' && <AudioPanel />}
       {subTab === 'storage' && <StoragePanel />}
       {subTab === 'users' && <UsersPanel />}
       {subTab === 'updates' && <UpdatesPanel />}

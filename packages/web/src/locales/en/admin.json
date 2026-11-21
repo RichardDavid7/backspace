@@ -478,5 +478,9 @@
       "users": "Users",
       "telemetry": "Say hi"
     }
+  },
+  "audio": {
+    "title": "Audio",
+    "description": "Configure voice audio encoding limits and default soundboard clips for this instance."
   }
 }

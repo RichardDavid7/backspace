@@ -310,7 +310,8 @@
       "storage": "Speicher",
       "users": "Nutzer",
       "updates": "Updates",
-      "telemetry": "Hallo sagen"
+      "telemetry": "Hallo sagen",
+      "audio": "Ton"
     }
   },
   "keybinds": {

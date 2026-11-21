@@ -478,5 +478,9 @@
       "users": "Nutzer",
       "telemetry": "Hallo sagen"
     }
+  },
+  "audio": {
+    "title": "Ton & Audio",
+    "description": "Konfiguriere Sprach-Audiolimits und Standard-Soundboard-Clips für diese Instanz."
   }
 }

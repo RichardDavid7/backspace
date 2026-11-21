@@ -463,5 +463,9 @@
       "users": "用户",
       "telemetry": "打个招呼"
     }
+  },
+  "audio": {
+    "title": "音频",
+    "description": "配置此实例的语音编码限制和默认音效板片段。"
   }
 }

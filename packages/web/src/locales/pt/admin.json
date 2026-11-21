@@ -493,5 +493,9 @@
       "users": "Usuários",
       "telemetry": "Oi"
     }
+  },
+  "audio": {
+    "title": "Áudio",
+    "description": "Configure os limites de codificação de voz e os efeitos sonoros padrão desta instância."
   }
 }

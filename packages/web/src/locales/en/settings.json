@@ -310,7 +310,8 @@
       "storage": "Storage",
       "users": "Users",
       "updates": "Updates",
-      "telemetry": "Say hi"
+      "telemetry": "Say hi",
+      "audio": "Audio"
     }
   },
   "keybinds": {

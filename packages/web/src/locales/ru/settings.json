@@ -312,7 +312,8 @@
       "storage": "Хранилище",
       "users": "Пользователи",
       "updates": "Обновления",
-      "telemetry": "Привет"
+      "telemetry": "Привет",
+      "audio": "Аудио"
     }
   },
   "keybinds": {
