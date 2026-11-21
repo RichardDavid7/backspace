@@ -337,6 +337,91 @@ export class AudioManager {
     }
   }
 
+  async loadSoundUrl(url: string): Promise<AudioBuffer | null> {
+    const cacheKey = `url:${url}`;
+    if (this.soundBuffers.has(cacheKey)) {
+      return this.soundBuffers.get(cacheKey)!;
+    }
+
+    if (!this.ctx) this.initContext();
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to load sound URL: ${response.status}`);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.ctx!.decodeAudioData(arrayBuffer);
+      // Cap cache size so long sessions with many custom clips don't grow unbounded
+      if (this.soundBuffers.size > 64) {
+        for (const key of this.soundBuffers.keys()) {
+          if (key.startsWith('url:')) {
+            this.soundBuffers.delete(key);
+            break;
+          }
+        }
+      }
+      this.soundBuffers.set(cacheKey, audioBuffer);
+      return audioBuffer;
+    } catch (err) {
+      console.error(`[AudioManager] Error loading sound URL ${url}:`, err);
+      return null;
+    }
+  }
+
+  async playSoundUrl(
+    url: string,
+    options: { volume?: number } = {},
+  ): Promise<{ source: AudioBufferSourceNode; durationMs: number } | null> {
+    this.activePlaybackCount++;
+    this.clearIdleSuspendTimer();
+    let playbackCompleted = false;
+    const finishPlayback = () => {
+      if (playbackCompleted) return;
+      playbackCompleted = true;
+      this.activePlaybackCount = Math.max(0, this.activePlaybackCount - 1);
+      this.scheduleIdleSuspendIfUnused();
+    };
+
+    try {
+      await this.resumeContext();
+      const buffer = await this.loadSoundUrl(url);
+      if (!buffer || !this.ctx) {
+        finishPlayback();
+        return null;
+      }
+
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const gainNode = this.ctx.createGain();
+      const targetVolume = Math.max(0, options.volume ?? 0.8);
+      const now = this.ctx.currentTime;
+      const attack = 0.01;
+      const release = 0.01;
+      const dur = buffer.duration;
+
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(targetVolume, now + attack);
+      if (dur > attack + release) {
+        gainNode.gain.setValueAtTime(targetVolume, now + dur - release);
+        gainNode.gain.linearRampToValueAtTime(0, now + dur);
+      }
+
+      source.onended = () => {
+        source.disconnect();
+        gainNode.disconnect();
+        finishPlayback();
+      };
+
+      source.connect(gainNode);
+      gainNode.connect(this.masterBoost!);
+      source.start(now);
+      return { source, durationMs: Math.round(dur * 1000) };
+    } catch (err) {
+      finishPlayback();
+      throw err;
+    }
+  }
+
   /**
    * Serialized input device switch.
    * Multiple callers (store, syncMic, UI) may trigger this concurrently.

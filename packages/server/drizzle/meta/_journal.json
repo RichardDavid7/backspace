@@ -232,6 +232,13 @@
       "when": 1795289700000,
       "tag": "0032_opus_audio_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1795294200000,
+      "tag": "0033_soundboard",
+      "breakpoints": true
     }
   ]
 }

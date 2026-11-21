@@ -14,6 +14,7 @@ import {
   toggleMuteFromControl,
 } from '../../utils/voiceActions';
 import { VoiceGrid } from '../voice/VoiceGrid';
+import { SoundboardPopover } from '../voice/SoundboardPopover';
 import { deriveGridTiles } from '../../hooks/useLiveKit';
 import { requestMicPermission } from '../../utils/voice';
 
@@ -70,6 +71,7 @@ export function MobileVoiceFullScreen() {
   // see docs/systems/voice.md "Hot-swap mid-call".
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [cameraPickerOpen, setCameraPickerOpen] = useState(false);
+  const [soundboardOpen, setSoundboardOpen] = useState(false);
   const cameraPickerAnchorRef = useRef<HTMLDivElement>(null);
   const cameraPickerPopupRef = useRef<HTMLDivElement>(null);
   const [cameraPickerRect, setCameraPickerRect] = useState<{ left: number; bottom: number } | null>(null);
@@ -561,6 +563,21 @@ export function MobileVoiceFullScreen() {
           </svg>
         </button>
 
+        {/* Soundboard */}
+        <button
+          onClick={() => setSoundboardOpen((v) => !v)}
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+            soundboardOpen
+              ? 'bg-accent-sky/20 text-accent-sky'
+              : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
+          }`}
+          aria-label={t('voice:soundboard.title')}
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+          </svg>
+        </button>
+
         {/* Disconnect */}
         <button
           onClick={handleDisconnect}
@@ -631,6 +648,19 @@ export function MobileVoiceFullScreen() {
                 {d.label || t('voice:camera.fallbackName', { index: i + 1 })}
               </button>
             ))}
+          </div>,
+          document.body,
+        )}
+      {soundboardOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[55] flex items-end justify-center bg-black/50 backdrop-blur-xs p-4 pb-24"
+            onClick={() => setSoundboardOpen(false)}
+          >
+            <SoundboardPopover
+              isOpen={soundboardOpen}
+              onClose={() => setSoundboardOpen(false)}
+            />
           </div>,
           document.body,
         )}

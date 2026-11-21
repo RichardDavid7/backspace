@@ -1207,6 +1207,28 @@ export interface InstanceStreamingLimits {
   allowStereoAudio?: boolean;
 }
 
+export type SoundboardScopeType = 'instance' | 'space' | 'dm';
+
+export interface SoundboardSound {
+  id: string;
+  scopeType: SoundboardScopeType;
+  scopeId: string;
+  name: string;
+  emoji: string;
+  fileUrl: string;
+  durationMs: number;
+  position: number;
+  uploadedBy: string;
+  createdAt: number;
+}
+
+export interface SoundboardListResponse {
+  instanceSounds: SoundboardSound[];
+  scopedSounds: SoundboardSound[];
+  canManageInstance: boolean;
+  canManageScope: boolean;
+}
+
 // ─── Federation Types ──────────────────────────────────────────────────────
 
 export interface InstanceInfoResponse {

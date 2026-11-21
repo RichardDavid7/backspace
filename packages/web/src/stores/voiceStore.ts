@@ -157,6 +157,14 @@ export interface VoiceState {
   retainWatchers: (present: ReadonlySet<string>) => void;
   soundEffectVolume: number;                 // 0-200 (100 = default)
   setSoundEffectVolume: (volume: number) => void;
+  soundboardVolume: number;                  // 0-200 (100 = default)
+  setSoundboardVolume: (volume: number) => void;
+  soundboardMuted: boolean;
+  setSoundboardMuted: (muted: boolean) => void;
+  soundboardMutedUserIds: Set<string>;
+  setUserSoundboardMuted: (userId: string, muted: boolean) => void;
+  activeSoundboardUsers: Map<string, { emoji: string; name: string; until: number }>;
+  markUserPlayingSoundboard: (userId: string, emoji: string, name: string, durationMs: number) => void;
   messageSoundAllChannels: boolean;          // false (default) = DM + mention only; true = every channel
   setMessageSoundAllChannels: (allChannels: boolean) => void;
   pipEnabled: boolean;                       // true (default) = floating window shows while browsing other channels
@@ -347,6 +355,38 @@ export const useVoiceStore = create<VoiceState>()(
 
       soundEffectVolume: 100,
       setSoundEffectVolume: (volume) => set({ soundEffectVolume: volume }),
+      soundboardVolume: 100,
+      setSoundboardVolume: (volume) => set({ soundboardVolume: Math.max(0, Math.min(200, Math.round(volume))) }),
+      soundboardMuted: false,
+      setSoundboardMuted: (muted) => set({ soundboardMuted: muted }),
+      soundboardMutedUserIds: new Set(),
+      setUserSoundboardMuted: (userId, muted) => {
+        set((state) => {
+          const next = new Set(state.soundboardMutedUserIds);
+          if (muted) next.add(userId);
+          else next.delete(userId);
+          return { soundboardMutedUserIds: next };
+        });
+      },
+      activeSoundboardUsers: new Map(),
+      markUserPlayingSoundboard: (userId, emoji, name, durationMs) => {
+        const clampedMs = Math.max(600, Math.min(15_000, Math.round(durationMs || 2000)));
+        const until = Date.now() + clampedMs;
+        set((state) => {
+          const next = new Map(state.activeSoundboardUsers);
+          next.set(userId, { emoji, name, until });
+          return { activeSoundboardUsers: next };
+        });
+        setTimeout(() => {
+          set((state) => {
+            const current = state.activeSoundboardUsers.get(userId);
+            if (!current || current.until > Date.now() + 50) return state;
+            const next = new Map(state.activeSoundboardUsers);
+            next.delete(userId);
+            return { activeSoundboardUsers: next };
+          });
+        }, clampedMs + 80);
+      },
       messageSoundAllChannels: false,
       setMessageSoundAllChannels: (allChannels) => set({ messageSoundAllChannels: allChannels }),
       pipEnabled: true,
@@ -844,6 +884,7 @@ export const useVoiceStore = create<VoiceState>()(
           watchingStreams: new Set(),
           unwatchedCameras: new Set(),
           streamWatchers: new Map(),
+          activeSoundboardUsers: new Map(),
           micPermissionDenied: false,
         });
       },
@@ -882,6 +923,7 @@ export const useVoiceStore = create<VoiceState>()(
         watchingStreams: new Set(),
         unwatchedCameras: new Set(),
         streamWatchers: new Map(),
+        activeSoundboardUsers: new Map(),
         spaceMutedUserIds: new Set(),
         spaceDeafenedUserIds: new Set(),
         permissionMutedUserIds: new Set(),
@@ -979,6 +1021,9 @@ export const useVoiceStore = create<VoiceState>()(
         autoGainControl: state.autoGainControl,
         rnnoiseEnabled: state.rnnoiseEnabled,
         soundEffectVolume: state.soundEffectVolume,
+        soundboardVolume: state.soundboardVolume,
+        soundboardMuted: state.soundboardMuted,
+        soundboardMutedUserIds: Array.from(state.soundboardMutedUserIds),
         messageSoundAllChannels: state.messageSoundAllChannels,
         pipEnabled: state.pipEnabled,
         hideNonVideoParticipants: state.hideNonVideoParticipants,
@@ -1016,6 +1061,10 @@ export const useVoiceStore = create<VoiceState>()(
         merged.streamMutes = currentState.streamMutes;
         merged.watchingStreams = currentState.watchingStreams;
         merged.unwatchedCameras = currentState.unwatchedCameras;
+        merged.activeSoundboardUsers = currentState.activeSoundboardUsers;
+        merged.soundboardMutedUserIds = Array.isArray(persistedState?.soundboardMutedUserIds)
+          ? new Set(persistedState.soundboardMutedUserIds.filter((id: unknown): id is string => typeof id === 'string'))
+          : currentState.soundboardMutedUserIds;
         return merged;
       },
     }

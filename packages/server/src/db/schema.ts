@@ -813,3 +813,19 @@ export const personalStickers = sqliteTable('personal_stickers', {
   name: text('name').notNull(),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({ pk: primaryKey({ columns: [table.userId, table.stickerId] }) }));
+
+export const soundboardSounds = sqliteTable('soundboard_sounds', {
+  id: text('id').primaryKey(),
+  scopeType: text('scope_type').notNull(), // 'instance' | 'space' | 'dm'
+  scopeId: text('scope_id').notNull(),     // 'instance' | spaceId | dmChannelId
+  name: text('name').notNull(),
+  emoji: text('emoji').notNull().default('🔊'),
+  fileName: text('file_name').notNull(),
+  mimeType: text('mime_type').notNull(),
+  durationMs: integer('duration_ms').notNull().default(0),
+  position: integer('position').notNull().default(0),
+  uploadedBy: text('uploaded_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  scopeIdx: index('idx_soundboard_scope').on(table.scopeType, table.scopeId, table.position),
+}));
