@@ -17,11 +17,12 @@ import { AvatarStack } from '../ui/AvatarStack';
 import { DmMemberRow, type DmMemberRowAction } from '../layout/DmMemberRow';
 import { visualPixels } from '../../platform/interfaceScale';
 import { pointAnchor } from '../../hooks/useFloatingPosition';
+import { SoundboardManagerPanel } from '../voice/SoundboardManagerPanel';
 
 const MAX_NAME_LENGTH = 50;
 const MAX_GROUP_MEMBERS = 10;
 
-type Tab = 'overview' | 'members';
+type Tab = 'overview' | 'members' | 'soundboard';
 
 /**
  * Settings modal for a group DM. Mirrors `SpaceSettings` structurally:
@@ -44,7 +45,7 @@ type Tab = 'overview' | 'members';
  * Cancel discards the staged blob; no upload fires.
  */
 export function GroupDmSettings() {
-  const { t } = useTranslation(['dm', 'common']);
+  const { t } = useTranslation(['dm', 'common', 'voice']);
   const activeModal = useUIStore((s) => s.activeModal);
   const modalData = useUIStore((s) => s.modalData);
   const closeModal = useUIStore((s) => s.closeModal);
@@ -603,6 +604,9 @@ export function GroupDmSettings() {
             <button type="button" onClick={() => handleTabClick('members')} className={tabBtnClass('members')}>
               {t('common:labels.members')}
             </button>
+            <button type="button" onClick={() => handleTabClick('soundboard')} className={tabBtnClass('soundboard')}>
+              {t('voice:soundboard.title')}
+            </button>
           </div>
         </div>
 
@@ -632,6 +636,9 @@ export function GroupDmSettings() {
               <button type="button" onClick={() => handleTabClick('members')} className={tabBtnClass('members')}>
                 {t('common:labels.members')}
               </button>
+              <button type="button" onClick={() => handleTabClick('soundboard')} className={tabBtnClass('soundboard')}>
+                {t('voice:soundboard.title')}
+              </button>
             </div>
           </div>
         )}
@@ -655,6 +662,9 @@ export function GroupDmSettings() {
               )}
               {tab === 'overview' && overviewPanel}
               {tab === 'members' && membersPanel}
+              {tab === 'soundboard' && (
+                <SoundboardManagerPanel scopeType="dm" scopeId={dmChannel.id} origin={viewer.origin} />
+              )}
             </div>
           </div>
         )}

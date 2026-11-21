@@ -326,6 +326,9 @@
     "folderPlaceholder": "Memes, Reações, Jogos…",
     "noFolder": "Sem pasta",
     "searchPlaceholder": "Buscar sons ou pastas…",
-    "addToFolder": "Adicionar som em {{folder}}"
+    "addToFolder": "Adicionar som em {{folder}}",
+    "managerInstanceDesc": "Sons padrão disponíveis para todos nesta instância.",
+    "managerSpaceDesc": "Sons personalizados compartilhados com os membros deste servidor.",
+    "managerDmDesc": "Sons personalizados compartilhados com os membros deste grupo."
   }
 }

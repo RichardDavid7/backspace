@@ -9,8 +9,8 @@ import {
   findPeakAmplitude,
   trimAndNormalizeToWav,
 } from '../../utils/audioClipEditor';
+import { EmojiPicker } from '../chat/EmojiPicker';
 
-const QUICK_EMOJIS = ['🔊', '🦆', '🥁', '🎺', '👏', '😂', '💥', '🎉', '💀', '🚨', '🎻', '🔔'];
 const MAX_CLIP_SECONDS = 10;
 const TARGET_NORMALIZE_PEAK = 0.891; // -1 dBFS
 
@@ -42,6 +42,7 @@ export function SoundboardEditorModal({
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🔊');
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [folder, setFolder] = useState('');
   const [normalize, setNormalize] = useState(true);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -76,6 +77,7 @@ export function SoundboardEditorModal({
     setError(null);
     setSaving(false);
     setAudioDirty(false);
+    setEmojiPickerOpen(false);
 
     if (initialSound) {
       setName(initialSound.name);
@@ -341,17 +343,33 @@ export function SoundboardEditorModal({
         </div>
 
         {/* Name & Emoji */}
-        <div className="grid grid-cols-[80px_1fr] gap-3">
-          <div>
+        <div className="grid grid-cols-[72px_1fr] gap-3">
+          <div className="relative">
             <label className="block text-xs font-medium text-text-secondary mb-1">
               {t('soundboard.emojiLabel')}
             </label>
-            <input
-              type="text"
-              value={emoji}
-              onChange={(e) => setEmoji(e.target.value.slice(0, 8))}
-              className="w-full h-10 rounded-xl bg-surface-900/70 border border-surface-700/60 text-center text-lg focus:outline-none focus:border-accent-sky"
-            />
+            <button
+              type="button"
+              onClick={() => setEmojiPickerOpen((v) => !v)}
+              className="w-full h-10 rounded-xl bg-surface-900/70 border border-surface-700/60 hover:border-accent-sky flex items-center justify-center text-xl transition-colors cursor-pointer"
+              title={t('soundboard.emojiLabel')}
+            >
+              {emoji}
+            </button>
+            {emojiPickerOpen && (
+              <div
+                className="absolute left-0 top-full mt-2 z-[60] rounded-xl overflow-hidden shadow-2xl border border-surface-700/80"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <EmojiPicker
+                  stickers={false}
+                  onEmojiSelect={(selected) => {
+                    setEmoji(selected.native);
+                    setEmojiPickerOpen(false);
+                  }}
+                />
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">
@@ -366,24 +384,6 @@ export function SoundboardEditorModal({
               className="w-full h-10 px-3 rounded-xl bg-surface-900/70 border border-surface-700/60 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-sky"
             />
           </div>
-        </div>
-
-        {/* Quick Emoji Picker */}
-        <div className="flex flex-wrap gap-1.5">
-          {QUICK_EMOJIS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setEmoji(item)}
-              className={`w-8 h-8 rounded-lg text-base flex items-center justify-center transition-colors cursor-pointer ${
-                emoji === item
-                  ? 'bg-accent-sky/25 ring-1 ring-accent-sky'
-                  : 'bg-surface-800/60 hover:bg-surface-700/70'
-              }`}
-            >
-              {item}
-            </button>
-          ))}
         </div>
 
         {/* Folder (optional) */}
