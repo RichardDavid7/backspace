@@ -51,6 +51,10 @@ export function VoiceControls() {
   }, [isScreenSharing]);
 
   useEffect(() => {
+    if (!currentVoiceChannelId && !activeDmCall) setShowSoundboard(false);
+  }, [currentVoiceChannelId, activeDmCall]);
+
+  useEffect(() => {
     if (!showSoundboard) {
       setSoundboardAnchor(null);
       return;

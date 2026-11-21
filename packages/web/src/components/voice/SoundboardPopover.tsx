@@ -273,22 +273,28 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
         <input
           type="range"
           min={0}
-          max={200}
-          step={5}
-          value={soundboardMuted ? 0 : soundboardVolume}
+          max={100}
+          step={1}
+          value={soundboardMuted ? 0 : Math.min(100, soundboardVolume)}
           onChange={(e) => {
             const val = Number(e.target.value);
             if (soundboardMuted && val > 0) setSoundboardMuted(false);
             setSoundboardVolume(val);
           }}
           aria-label={t('soundboard.volumeLabel')}
-          className="flex-1 h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
             [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
             [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+          style={{
+            background: (() => {
+              const pct = soundboardMuted ? 0 : Math.max(0, Math.min(100, soundboardVolume));
+              return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+            })(),
+          }}
         />
         <span className="text-[11px] font-mono tabular-nums text-txt-tertiary w-9 text-right">
-          {t('soundboard.volumePercent', { value: soundboardMuted ? 0 : soundboardVolume })}
+          {t('soundboard.volumePercent', { value: soundboardMuted ? 0 : Math.min(100, soundboardVolume) })}
         </span>
       </div>
 

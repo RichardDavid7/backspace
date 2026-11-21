@@ -323,10 +323,15 @@ export function SoundboardEditorModal({
       title={initialSound ? t('soundboard.editTitle') : t('soundboard.addTitle')}
       maxWidth="max-w-lg"
     >
-      <div className="space-y-4">
+      <div
+        className="space-y-4"
+        onClick={() => {
+          if (emojiPickerOpen) setEmojiPickerOpen(false);
+        }}
+      >
         {/* Name & Emoji */}
         <div className="grid grid-cols-[68px_1fr] gap-3">
-          <div className="relative">
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
             <label className="block text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary mb-1.5">
               {t('soundboard.emojiLabel')}
             </label>
@@ -494,10 +499,17 @@ export function SoundboardEditorModal({
                   step={0.05}
                   value={startSec}
                   onChange={(e) => handleStartChange(Number(e.target.value))}
-                  className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base
                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
                     [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
                     [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+                  style={{
+                    background: (() => {
+                      const maxStart = Math.max(0.1, duration - 0.1);
+                      const pct = Math.max(0, Math.min(100, (startSec / maxStart) * 100));
+                      return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+                    })(),
+                  }}
                 />
               </div>
               <div>
@@ -512,10 +524,17 @@ export function SoundboardEditorModal({
                   step={0.05}
                   value={endSec}
                   onChange={(e) => handleEndChange(Number(e.target.value))}
-                  className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base
                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
                     [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
                     [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+                  style={{
+                    background: (() => {
+                      const span = Math.max(0.01, duration - 0.1);
+                      const pct = Math.max(0, Math.min(100, ((endSec - 0.1) / span) * 100));
+                      return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+                    })(),
+                  }}
                 />
               </div>
             </div>

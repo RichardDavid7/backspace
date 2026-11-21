@@ -356,7 +356,7 @@ export const useVoiceStore = create<VoiceState>()(
       soundEffectVolume: 100,
       setSoundEffectVolume: (volume) => set({ soundEffectVolume: volume }),
       soundboardVolume: 100,
-      setSoundboardVolume: (volume) => set({ soundboardVolume: Math.max(0, Math.min(200, Math.round(volume))) }),
+      setSoundboardVolume: (volume) => set({ soundboardVolume: Math.max(0, Math.min(100, Math.round(volume))) }),
       soundboardMuted: false,
       setSoundboardMuted: (muted) => set({ soundboardMuted: muted }),
       soundboardMutedUserIds: new Set(),
@@ -1062,6 +1062,9 @@ export const useVoiceStore = create<VoiceState>()(
         merged.watchingStreams = currentState.watchingStreams;
         merged.unwatchedCameras = currentState.unwatchedCameras;
         merged.activeSoundboardUsers = currentState.activeSoundboardUsers;
+        if (typeof merged.soundboardVolume === 'number') {
+          merged.soundboardVolume = Math.max(0, Math.min(100, Math.round(merged.soundboardVolume)));
+        }
         merged.soundboardMutedUserIds = Array.isArray(persistedState?.soundboardMutedUserIds)
           ? new Set(persistedState.soundboardMutedUserIds.filter((id: unknown): id is string => typeof id === 'string'))
           : currentState.soundboardMutedUserIds;
