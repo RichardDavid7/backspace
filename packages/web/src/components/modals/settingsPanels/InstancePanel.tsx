@@ -13,11 +13,12 @@ import { StoragePanel } from '../instanceSettingsPanels/StoragePanel';
 import { UsersPanel } from '../instanceSettingsPanels/UsersPanel';
 import { UpdatesPanel } from '../instanceSettingsPanels/UpdatesPanel';
 import { TelemetryPanel } from '../instanceSettingsPanels/TelemetryPanel';
+import { SoundboardManagerPanel } from '../../voice/SoundboardManagerPanel';
 
-type SubTab = 'general' | 'registration' | 'federation' | 'streaming' | 'storage' | 'users' | 'updates' | 'telemetry';
+type SubTab = 'general' | 'registration' | 'federation' | 'streaming' | 'soundboard' | 'storage' | 'users' | 'updates' | 'telemetry';
 
 export function InstancePanel() {
-  const { t } = useTranslation(['settings']);
+  const { t } = useTranslation(['settings', 'voice']);
   const fetchInstanceSettings = useSettingsStore((s) => s.fetchInstanceSettings);
   const fetchTelemetry = useSettingsStore((s) => s.fetchTelemetry);
   // Read here rather than in the telemetry panel alone: the invitation has to
@@ -34,6 +35,7 @@ export function InstancePanel() {
     { id: 'registration', label: t('settings:instance.tabs.registration') },
     { id: 'federation', label: t('settings:instance.tabs.federation'), badgeCount: approvalCount },
     { id: 'streaming', label: t('settings:instance.tabs.streaming') },
+    { id: 'soundboard', label: t('voice:soundboard.title') },
     { id: 'storage', label: t('settings:instance.tabs.storage') },
     { id: 'users', label: t('settings:instance.tabs.users') },
     { id: 'updates', label: t('settings:instance.tabs.updates'), badgeDot: updateBadge },
@@ -71,6 +73,7 @@ export function InstancePanel() {
       {subTab === 'registration' && <RegistrationPanel />}
       {subTab === 'federation' && <FederationPanel onApprovalCountChange={setApprovalCount} />}
       {subTab === 'streaming' && <StreamingPanel />}
+      {subTab === 'soundboard' && <SoundboardManagerPanel scopeType="instance" scopeId={null} origin="" />}
       {subTab === 'storage' && <StoragePanel />}
       {subTab === 'users' && <UsersPanel />}
       {subTab === 'updates' && <UpdatesPanel />}

@@ -334,6 +334,9 @@
     "folderPlaceholder": "Memes, Reactions, Games…",
     "noFolder": "No folder",
     "searchPlaceholder": "Search sounds or folders…",
-    "addToFolder": "Add sound to {{folder}}"
+    "addToFolder": "Add sound to {{folder}}",
+    "managerInstanceDesc": "Default sounds available to everyone on this instance.",
+    "managerSpaceDesc": "Custom sounds shared with members of this space.",
+    "managerDmDesc": "Custom sounds shared with members of this group."
   }
 }

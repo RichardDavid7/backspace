@@ -12,6 +12,7 @@ import { api } from '../../api/client';
 import { getApiForOrigin } from '../../utils/crossStoreResolvers';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { OverviewPanel, MembersPanel, RolesPanel, BansPanel, SettingsPanelSuspense } from './lazySettingsPanels';
+import { SoundboardManagerPanel } from '../voice/SoundboardManagerPanel';
 import { useVisibilityOptions } from './spaceSettingsPanels/spaceOptions';
 import { ListInDirectoryConfirm } from './DirectoryConfirmations';
 import type { SpaceVisibility, JoinRequest, InstanceStreamingLimits } from '@backspace/shared';
@@ -597,16 +598,16 @@ function JoinRequestsSection({ spaceId }: { spaceId: string }) {
   );
 }
 
-type SpaceSettingsTab = 'overview' | 'discovery' | 'members' | 'roles' | 'bans';
+type SpaceSettingsTab = 'overview' | 'discovery' | 'soundboard' | 'members' | 'roles' | 'bans';
 
-const SPACE_SETTINGS_TABS: readonly SpaceSettingsTab[] = ['overview', 'discovery', 'members', 'roles', 'bans'];
+const SPACE_SETTINGS_TABS: readonly SpaceSettingsTab[] = ['overview', 'discovery', 'soundboard', 'members', 'roles', 'bans'];
 
 function isSpaceSettingsTab(value: unknown): value is SpaceSettingsTab {
   return typeof value === 'string' && (SPACE_SETTINGS_TABS as readonly string[]).includes(value);
 }
 
 export function SpaceSettingsModal() {
-  const { t } = useTranslation(['spaces', 'common']);
+  const { t } = useTranslation(['spaces', 'common', 'voice']);
   const activeModal = useUIStore((s) => s.activeModal);
   const modalData = useUIStore((s) => s.modalData);
   const closeModal = useUIStore((s) => s.closeModal);
@@ -620,6 +621,7 @@ export function SpaceSettingsModal() {
 
   const isOpen = activeModal === 'spaceSettings';
   const space = spaces.find(s => s.id === currentSpaceId);
+  const spaceOrigin = space?._instanceOrigin ?? '';
   const mySpacePerms = currentSpaceId ? spacePermissions.get(currentSpaceId) : undefined;
   const canManageSpace = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SPACE);
   const canManageRoles = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_ROLES);
@@ -635,6 +637,7 @@ export function SpaceSettingsModal() {
     const allowed: Record<SpaceSettingsTab, boolean> = {
       overview: true,
       discovery: canManageSpace,
+      soundboard: true,
       members: true,
       roles: canManageRoles,
       bans: canBanMembers,
@@ -686,6 +689,7 @@ export function SpaceSettingsModal() {
             {canManageSpace && (
               <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
             )}
+            <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
 
             <div className="border-t border-white/[0.04] my-2 mx-2" />
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
@@ -723,6 +727,7 @@ export function SpaceSettingsModal() {
               {canManageSpace && (
                 <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
               )}
+              <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
 
               <div className="border-t border-white/[0.04] my-2 mx-2" />
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
@@ -757,6 +762,7 @@ export function SpaceSettingsModal() {
               <SettingsPanelSuspense key={tab}>
                 {tab === 'overview' && <OverviewPanel spaceId={currentSpaceId} />}
                 {tab === 'discovery' && canManageSpace && <DiscoveryPanel spaceId={currentSpaceId} />}
+                {tab === 'soundboard' && <SoundboardManagerPanel scopeType="space" scopeId={currentSpaceId} origin={spaceOrigin} />}
                 {tab === 'members' && <MembersPanel spaceId={currentSpaceId} />}
                 {tab === 'roles' && canManageRoles && <RolesPanel spaceId={currentSpaceId} />}
                 {tab === 'bans' && canBanMembers && <BansPanel spaceId={currentSpaceId} />}
