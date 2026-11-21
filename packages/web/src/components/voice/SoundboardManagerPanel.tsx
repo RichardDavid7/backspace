@@ -10,6 +10,8 @@ interface SoundboardManagerPanelProps {
   scopeType: SoundboardScopeType;
   scopeId: string | null;
   origin: string;
+  /** Render as a compact subsection inside another panel (e.g. Instance Audio tab) rather than a top-level page heading. */
+  embedded?: boolean;
 }
 
 interface EditorState {
@@ -34,6 +36,7 @@ export function SoundboardManagerPanel({
   scopeType,
   scopeId,
   origin,
+  embedded = false,
 }: SoundboardManagerPanelProps) {
   const { t } = useTranslation('voice');
   const addToast = useUIStore((s) => s.addToast);
@@ -159,23 +162,23 @@ export function SoundboardManagerPanel({
         return (
           <div
             key={sound.id}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
               isPlaying
-                ? 'bg-accent-sky/15 border-accent-sky/60'
+                ? 'bg-accent-primary/15 border-accent-primary/50'
                 : 'bg-surface-channel/70 border-white/[0.06] hover:border-white/10'
             }`}
           >
             <button
               type="button"
               onClick={() => handlePreview(sound)}
-              className="w-8 h-8 rounded-lg bg-surface-elevated/80 hover:bg-accent-sky/20 flex items-center justify-center text-base shrink-0 transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-md bg-surface-elevated hover:bg-interactive-hover flex items-center justify-center text-base shrink-0 transition-colors cursor-pointer"
               title={t('soundboard.preview')}
             >
               {sound.emoji}
             </button>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-txt-primary truncate">{sound.name}</div>
-              <div className="text-[11px] text-txt-tertiary font-mono">
+              <div className="text-[11px] text-txt-tertiary font-mono tabular-nums">
                 {t('soundboard.seconds', { value: (sound.durationMs / 1000).toFixed(2) })}
               </div>
             </div>
@@ -185,7 +188,7 @@ export function SoundboardManagerPanel({
                   type="button"
                   disabled={idx === 0}
                   onClick={() => void handleMoveInGroup(sound.id, groupFolder, -1)}
-                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
                   aria-label={t('soundboard.moveUp')}
                   title={t('soundboard.moveUp')}
                 >
@@ -197,7 +200,7 @@ export function SoundboardManagerPanel({
                   type="button"
                   disabled={idx === items.length - 1}
                   onClick={() => void handleMoveInGroup(sound.id, groupFolder, 1)}
-                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
                   aria-label={t('soundboard.moveDown')}
                   title={t('soundboard.moveDown')}
                 >
@@ -208,7 +211,7 @@ export function SoundboardManagerPanel({
                 <button
                   type="button"
                   onClick={() => setEditor({ sound, defaultFolder: sound.folder })}
-                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-accent-sky hover:bg-interactive-hover transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
                   aria-label={t('soundboard.edit')}
                   title={t('soundboard.edit')}
                 >
@@ -219,7 +222,7 @@ export function SoundboardManagerPanel({
                 <button
                   type="button"
                   onClick={() => void handleDelete(sound)}
-                  className="p-1.5 rounded-lg text-txt-tertiary hover:text-accent-rose hover:bg-interactive-hover transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-danger hover:bg-accent-rose/10 transition-colors cursor-pointer"
                   aria-label={t('soundboard.delete')}
                   title={t('soundboard.delete')}
                 >
@@ -242,17 +245,23 @@ export function SoundboardManagerPanel({
       : 'soundboard.managerDmDesc';
 
   return (
-    <div className="space-y-4">
+    <div className={embedded ? 'space-y-2' : 'space-y-4'}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-txt-primary">{t('soundboard.title')}</h2>
-          <p className="text-xs text-txt-tertiary mt-0.5">{t(descriptionKey)}</p>
+          {embedded ? (
+            <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1">
+              {t('soundboard.title')}
+            </div>
+          ) : (
+            <h2 className="text-lg font-semibold text-txt-primary">{t('soundboard.title')}</h2>
+          )}
+          <p className="text-xs text-txt-tertiary">{t(descriptionKey)}</p>
         </div>
         {canManage && (
           <button
             type="button"
             onClick={() => setEditor({ sound: null, defaultFolder: null })}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-sky text-surface-950 hover:bg-accent-sky/90 text-xs font-semibold transition-colors shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent-primary hover:bg-accent-primary/80 text-white text-xs font-medium transition-colors shrink-0 cursor-pointer"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
@@ -262,67 +271,69 @@ export function SoundboardManagerPanel({
         )}
       </div>
 
-      {loading ? (
-        <div className="py-8 text-center text-sm text-txt-tertiary">{t('soundboard.loading')}</div>
-      ) : sounds.length === 0 ? (
-        <div className="py-8 px-4 text-center rounded-xl bg-surface-channel/50 border border-white/[0.06] text-sm text-txt-tertiary">
-          {t('soundboard.emptyScope')}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {ungrouped.length > 0 && renderRows(ungrouped, null)}
+      <div className={embedded ? 'rounded-lg bg-white/[0.02] p-3.5 space-y-3' : 'space-y-3'}>
+        {loading ? (
+          <div className="py-6 text-center text-sm text-txt-tertiary">{t('soundboard.loading')}</div>
+        ) : sounds.length === 0 ? (
+          <div className="py-6 px-4 text-center rounded-lg bg-white/[0.02] border border-white/[0.05] text-xs text-txt-tertiary">
+            {t('soundboard.emptyScope')}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {ungrouped.length > 0 && renderRows(ungrouped, null)}
 
-          {Array.from(folderMap.entries()).map(([folderName, folderSounds]) => {
-            const isCollapsed = collapsedFolders.has(folderName);
-            return (
-              <div
-                key={folderName}
-                className="rounded-xl bg-surface-channel/40 border border-white/[0.06] p-3 space-y-2.5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleFolder(folderName)}
-                    className="flex items-center gap-2 min-w-0 flex-1 text-left text-sm font-medium text-txt-primary hover:text-accent-sky transition-colors cursor-pointer"
-                  >
-                    <svg
-                      className={`w-4 h-4 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      aria-hidden="true"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-                    </svg>
-                    <svg className="w-4 h-4 shrink-0 text-accent-sky/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-                    </svg>
-                    <span className="truncate">{folderName}</span>
-                    <span className="text-xs text-txt-tertiary shrink-0">{folderSounds.length}</span>
-                  </button>
-                  {canManage && (
+            {Array.from(folderMap.entries()).map(([folderName, folderSounds]) => {
+              const isCollapsed = collapsedFolders.has(folderName);
+              return (
+                <div
+                  key={folderName}
+                  className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-3 space-y-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
                     <button
                       type="button"
-                      onClick={() => setEditor({ sound: null, defaultFolder: folderName })}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-txt-tertiary hover:text-accent-sky hover:bg-interactive-hover transition-colors cursor-pointer"
-                      aria-label={t('soundboard.addToFolder', { folder: folderName })}
-                      title={t('soundboard.addToFolder', { folder: folderName })}
+                      onClick={() => toggleFolder(folderName)}
+                      className="flex items-center gap-2 min-w-0 flex-1 text-left text-sm font-medium text-txt-primary hover:text-accent-primary transition-colors cursor-pointer"
                     >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                      <svg
+                        className={`w-4 h-4 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
                       </svg>
-                      <span>{t('soundboard.addButton')}</span>
+                      <svg className="w-4 h-4 shrink-0 text-accent-primary/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                      </svg>
+                      <span className="truncate">{folderName}</span>
+                      <span className="text-xs text-txt-tertiary shrink-0">{folderSounds.length}</span>
                     </button>
-                  )}
-                </div>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => setEditor({ sound: null, defaultFolder: folderName })}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
+                        aria-label={t('soundboard.addToFolder', { folder: folderName })}
+                        title={t('soundboard.addToFolder', { folder: folderName })}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                        <span>{t('soundboard.addButton')}</span>
+                      </button>
+                    )}
+                  </div>
 
-                {!isCollapsed && renderRows(folderSounds, folderName)}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  {!isCollapsed && renderRows(folderSounds, folderName)}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <SoundboardEditorModal
         isOpen={editor !== null}

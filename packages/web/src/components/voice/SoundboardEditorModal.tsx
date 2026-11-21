@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { SoundboardScopeType, SoundboardSound } from '@backspace/shared';
 import { getApiForOrigin } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
+import { Modal } from '../ui/Modal';
+import { Toggle } from '../ui/Toggle';
 import {
   computeWaveformPeaks,
   findPeakAmplitude,
@@ -143,8 +144,6 @@ export function SoundboardEditorModal({
     if (!audioBuffer) return [];
     return computeWaveformPeaks(audioBuffer, 64);
   }, [audioBuffer]);
-
-  if (!isOpen) return null;
 
   const duration = audioBuffer?.duration ?? 0;
   const trimDuration = Math.max(0, endSec - startSec);
@@ -317,48 +316,31 @@ export function SoundboardEditorModal({
   const startPct = duration > 0 ? (startSec / duration) * 100 : 0;
   const endPct = duration > 0 ? (endSec / duration) * 100 : 100;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={initialSound ? t('soundboard.editTitle') : t('soundboard.addTitle')}
+      maxWidth="max-w-lg"
     >
-      <div
-        className="glass-modal w-full max-w-lg rounded-2xl p-5 text-text-primary shadow-2xl space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">
-            {initialSound ? t('soundboard.editTitle') : t('soundboard.addTitle')}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-700/50 transition-colors cursor-pointer"
-            aria-label={t('soundboard.close')}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
+      <div className="space-y-4">
         {/* Name & Emoji */}
-        <div className="grid grid-cols-[72px_1fr] gap-3">
+        <div className="grid grid-cols-[68px_1fr] gap-3">
           <div className="relative">
-            <label className="block text-xs font-medium text-text-secondary mb-1">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary mb-1.5">
               {t('soundboard.emojiLabel')}
             </label>
             <button
               type="button"
               onClick={() => setEmojiPickerOpen((v) => !v)}
-              className="w-full h-10 rounded-xl bg-surface-900/70 border border-surface-700/60 hover:border-accent-sky flex items-center justify-center text-xl transition-colors cursor-pointer"
+              className="w-full h-10 rounded-lg bg-surface-channel border border-white/[0.08] hover:bg-interactive-hover hover:border-white/15 flex items-center justify-center text-xl transition-colors cursor-pointer"
               title={t('soundboard.emojiLabel')}
             >
               {emoji}
             </button>
             {emojiPickerOpen && (
               <div
-                className="absolute left-0 top-full mt-2 z-[60] rounded-xl overflow-hidden shadow-2xl border border-surface-700/80"
+                className="absolute left-0 top-full mt-2 z-[250] rounded-xl overflow-hidden shadow-2xl border border-border-soft"
                 onClick={(e) => e.stopPropagation()}
               >
                 <EmojiPicker
@@ -372,7 +354,7 @@ export function SoundboardEditorModal({
             )}
           </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary mb-1.5">
               {t('soundboard.nameLabel')}
             </label>
             <input
@@ -381,14 +363,14 @@ export function SoundboardEditorModal({
               maxLength={32}
               placeholder={t('soundboard.namePlaceholder')}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl bg-surface-900/70 border border-surface-700/60 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-sky"
+              className="input-standard w-full h-10 px-3 text-sm"
             />
           </div>
         </div>
 
         {/* Folder (optional) */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-text-secondary">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary">
             {t('soundboard.folderLabel')}
           </label>
           <input
@@ -397,17 +379,17 @@ export function SoundboardEditorModal({
             maxLength={32}
             placeholder={t('soundboard.folderPlaceholder')}
             onChange={(e) => setFolder(e.target.value)}
-            className="w-full h-9 px-3 rounded-xl bg-surface-900/70 border border-surface-700/60 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-sky"
+            className="input-standard w-full h-9 px-3 text-xs"
           />
           {existingFolders.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
               <button
                 type="button"
                 onClick={() => setFolder('')}
-                className={`px-2 py-0.5 rounded-md text-[11px] transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer ${
                   folder.trim() === ''
-                    ? 'bg-accent-sky/25 text-accent-sky ring-1 ring-accent-sky/60'
-                    : 'bg-surface-800/60 text-text-muted hover:text-text-primary'
+                    ? 'bg-accent-primary text-white'
+                    : 'bg-surface-elevated text-txt-secondary hover:bg-interactive-hover'
                 }`}
               >
                 {t('soundboard.noFolder')}
@@ -417,10 +399,10 @@ export function SoundboardEditorModal({
                   key={f}
                   type="button"
                   onClick={() => setFolder(f)}
-                  className={`px-2 py-0.5 rounded-md text-[11px] transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer ${
                     folder.trim() === f
-                      ? 'bg-accent-sky/25 text-accent-sky ring-1 ring-accent-sky/60'
-                      : 'bg-surface-800/60 text-text-secondary hover:text-text-primary'
+                      ? 'bg-accent-primary text-white'
+                      : 'bg-surface-elevated text-txt-secondary hover:bg-interactive-hover'
                   }`}
                 >
                   {f}
@@ -442,7 +424,7 @@ export function SoundboardEditorModal({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-surface-600 hover:border-accent-sky/70 bg-surface-900/40 hover:bg-surface-800/50 text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-dashed border-white/15 hover:border-accent-primary/70 bg-white/[0.02] hover:bg-interactive-hover text-sm text-txt-secondary hover:text-txt-primary transition-colors cursor-pointer"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
@@ -455,23 +437,23 @@ export function SoundboardEditorModal({
 
         {/* Mini Waveform Trim Editor */}
         {loadingAudio && (
-          <div className="py-6 text-center text-xs text-text-muted">
+          <div className="py-6 text-center text-xs text-txt-tertiary">
             {t('soundboard.loadingAudio')}
           </div>
         )}
 
         {audioBuffer && !loadingAudio && (
-          <div className="space-y-3 p-3 rounded-xl bg-surface-900/60 border border-surface-700/60">
-            <div className="flex items-center justify-between text-xs text-text-secondary">
+          <div className="space-y-3 p-3.5 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center justify-between text-xs text-txt-secondary">
               <span className="inline-flex items-center gap-1.5 font-medium">
-                <svg className="w-3.5 h-3.5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <svg className="w-3.5 h-3.5 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <circle cx="6" cy="6" r="3" />
                   <circle cx="6" cy="18" r="3" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12" />
                 </svg>
                 {t('soundboard.trimEditor')}
               </span>
-              <span className="font-mono text-[11px] text-text-muted">
+              <span className="font-mono tabular-nums text-[11px] text-txt-tertiary">
                 {t('soundboard.trimRange', {
                   start: startSec.toFixed(2),
                   end: endSec.toFixed(2),
@@ -481,7 +463,7 @@ export function SoundboardEditorModal({
             </div>
 
             {/* Waveform Bars */}
-            <div className="relative h-16 flex items-center gap-[2px] px-1 rounded-lg bg-surface-950/70 overflow-hidden">
+            <div className="relative h-16 flex items-center gap-[2px] px-1.5 rounded-lg bg-surface-base/80 border border-white/[0.04] overflow-hidden">
               {peaks.map((peak, idx) => {
                 const pct = ((idx + 0.5) / peaks.length) * 100;
                 const inRange = pct >= startPct && pct <= endPct;
@@ -490,7 +472,7 @@ export function SoundboardEditorModal({
                   <div
                     key={idx}
                     className={`flex-1 rounded-full transition-colors ${
-                      inRange ? 'bg-accent-sky' : 'bg-surface-600/40'
+                      inRange ? 'bg-accent-primary' : 'bg-white/15'
                     }`}
                     style={{ height: `${heightPct}%` }}
                   />
@@ -501,9 +483,9 @@ export function SoundboardEditorModal({
             {/* Start / End Range Sliders */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="flex justify-between text-[11px] text-text-muted mb-1">
+                <div className="flex justify-between text-[11px] text-txt-tertiary mb-1.5">
                   <span>{t('soundboard.trimStart')}</span>
-                  <span className="font-mono">{t('soundboard.seconds', { value: startSec.toFixed(2) })}</span>
+                  <span className="font-mono tabular-nums">{t('soundboard.seconds', { value: startSec.toFixed(2) })}</span>
                 </div>
                 <input
                   type="range"
@@ -512,13 +494,16 @@ export function SoundboardEditorModal({
                   step={0.05}
                   value={startSec}
                   onChange={(e) => handleStartChange(Number(e.target.value))}
-                  className="w-full accent-accent-sky cursor-pointer"
+                  className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
+                    [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
                 />
               </div>
               <div>
-                <div className="flex justify-between text-[11px] text-text-muted mb-1">
+                <div className="flex justify-between text-[11px] text-txt-tertiary mb-1.5">
                   <span>{t('soundboard.trimEnd')}</span>
-                  <span className="font-mono">{t('soundboard.seconds', { value: endSec.toFixed(2) })}</span>
+                  <span className="font-mono tabular-nums">{t('soundboard.seconds', { value: endSec.toFixed(2) })}</span>
                 </div>
                 <input
                   type="range"
@@ -527,28 +512,31 @@ export function SoundboardEditorModal({
                   step={0.05}
                   value={endSec}
                   onChange={(e) => handleEndChange(Number(e.target.value))}
-                  className="w-full accent-accent-sky cursor-pointer"
+                  className="w-full h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
+                    [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
                 />
               </div>
             </div>
 
             {/* Preview + Normalize Row */}
-            <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/[0.04]">
               <button
                 type="button"
                 onClick={() => void handlePreview()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-sky/20 hover:bg-accent-sky/30 text-accent-sky text-xs font-medium transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-elevated hover:bg-interactive-hover text-txt-primary text-xs font-medium transition-colors cursor-pointer"
               >
                 {isPlayingPreview ? (
                   <>
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg className="w-3.5 h-3.5 fill-current text-accent-primary" viewBox="0 0 24 24" aria-hidden="true">
                       <rect x="6" y="6" width="12" height="12" rx="1.5" />
                     </svg>
                     <span>{t('soundboard.stopPreview')}</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg className="w-3.5 h-3.5 fill-current text-accent-primary" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                     <span>{t('soundboard.preview')}</span>
@@ -556,37 +544,32 @@ export function SoundboardEditorModal({
                 )}
               </button>
 
-              <label className="inline-flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={normalize}
-                  onChange={(e) => {
-                    setNormalize(e.target.checked);
+              <div className="inline-flex items-center gap-2.5 text-xs text-txt-secondary">
+                <span>{t('soundboard.normalizeVolume')}</span>
+                <Toggle
+                  enabled={normalize}
+                  onChange={(enabled) => {
+                    setNormalize(enabled);
                     setAudioDirty(true);
                   }}
-                  className="rounded accent-accent-sky"
                 />
-                <svg className="w-3.5 h-3.5 text-accent-amber" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z" />
-                </svg>
-                <span>{t('soundboard.normalizeVolume')}</span>
-              </label>
+              </div>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="text-xs text-accent-rose bg-accent-rose/10 border border-accent-rose/30 rounded-lg px-3 py-2">
+          <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-xs">
             {error}
           </div>
         )}
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2 pt-1">
+        <div className="flex items-center justify-end gap-2 pt-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-2 rounded-xl text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-700/50 transition-colors cursor-pointer"
+            className="px-3 py-1.5 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors cursor-pointer"
           >
             {t('soundboard.cancel')}
           </button>
@@ -594,13 +577,12 @@ export function SoundboardEditorModal({
             type="button"
             disabled={saving || loadingAudio}
             onClick={() => void handleSave()}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-accent-sky text-surface-950 hover:bg-accent-sky/90 disabled:opacity-50 transition-colors cursor-pointer"
+            className="px-4 py-1.5 rounded-full text-sm font-medium bg-accent-primary hover:bg-accent-primary/80 text-white disabled:opacity-50 transition-colors cursor-pointer"
           >
             {saving ? t('soundboard.saving') : t('soundboard.save')}
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }
