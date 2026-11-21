@@ -63,6 +63,16 @@ function isInstanceAdmin(userId: string): boolean {
   return u?.isAdmin === 1;
 }
 
+function getMaxSoundsPerScope(): number {
+  const db = getDb();
+  const row = db
+    .select({ maxSoundboardSoundsPerScope: schema.instanceSettings.maxSoundboardSoundsPerScope })
+    .from(schema.instanceSettings)
+    .where(eq(schema.instanceSettings.id, 1))
+    .get();
+  return row?.maxSoundboardSoundsPerScope ?? 32;
+}
+
 function canManageScope(userId: string, scopeType: SoundboardScopeType, scopeId: string): boolean {
   if (scopeType === 'instance') {
     return isInstanceAdmin(userId);
@@ -160,6 +170,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       scopedSounds: scopedRows.map(rowToSound),
       canManageInstance: isInstanceAdmin(request.userId),
       canManageScope: scopeManageable,
+      maxSoundsPerScope: getMaxSoundsPerScope(),
     });
   });
 
@@ -225,12 +236,6 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'validation_failed');
     }
 
-    const id = generateSnowflake();
-    const fileName = `${randomUUID()}.${ext}`;
-    const dir = soundboardDir();
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, fileName), fileBuffer);
-
     const db = getDb();
     const existing = db.select({ position: schema.soundboardSounds.position })
       .from(schema.soundboardSounds)
@@ -239,6 +244,19 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
         eq(schema.soundboardSounds.scopeId, scopeId),
       ))
       .all();
+
+    if (scopeType !== 'instance') {
+      const limit = getMaxSoundsPerScope();
+      if (existing.length >= limit) {
+        return sendError(reply, 400, 'validation_failed');
+      }
+    }
+
+    const id = generateSnowflake();
+    const fileName = `${randomUUID()}.${ext}`;
+    const dir = soundboardDir();
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, fileName), fileBuffer);
     const nextPos = existing.length > 0 ? Math.max(...existing.map((r) => r.position)) + 1 : 0;
 
     const row: typeof schema.soundboardSounds.$inferInsert = {

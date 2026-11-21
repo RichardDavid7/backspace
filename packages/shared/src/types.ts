@@ -1205,6 +1205,8 @@ export interface InstanceStreamingLimits {
   allowMusicMode?: boolean;
   /** Whether Stereo Opus audio is permitted on this instance (default true). */
   allowStereoAudio?: boolean;
+  /** Maximum custom soundboard clips per space or group DM (0 disables custom uploads, default 32). */
+  maxSoundboardSoundsPerScope?: number;
 }
 
 export type SoundboardScopeType = 'instance' | 'space' | 'dm';
@@ -1228,6 +1230,7 @@ export interface SoundboardListResponse {
   scopedSounds: SoundboardSound[];
   canManageInstance: boolean;
   canManageScope: boolean;
+  maxSoundsPerScope?: number;
 }
 
 // ─── Federation Types ──────────────────────────────────────────────────────

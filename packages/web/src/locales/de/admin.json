@@ -481,6 +481,10 @@
   },
   "audio": {
     "title": "Ton & Audio",
-    "description": "Konfiguriere Sprach-Audiolimits und Standard-Soundboard-Clips für diese Instanz."
+    "description": "Konfiguriere Sprach-Audiolimits und Standard-Soundboard-Clips für diese Instanz.",
+    "maxSoundboardPerScope": {
+      "label": "Max. eigene Sounds pro Space / Gruppe",
+      "description": "Begrenzt die Anzahl eigener Soundboard-Clips pro Space oder Gruppe (0 deaktiviert eigene Uploads)."
+    }
   }
 }

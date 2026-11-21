@@ -335,6 +335,9 @@
     "addToFolder": "添加音效到 {{folder}}",
     "managerInstanceDesc": "此实例上所有人可用的默认音效。",
     "managerSpaceDesc": "与此空间成员共享的自定义音效。",
-    "managerDmDesc": "与此群组成员共享的自定义音效。"
+    "managerDmDesc": "与此群组成员共享的自定义音效。",
+    "slotUsage": "{{current}} / {{max}} 个",
+    "limitReached": "已达到此实例允许的自定义音效上限。",
+    "disabledByInstance": "实例管理员已禁用空间和群组的自定义音效。"
   }
 }

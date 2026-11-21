@@ -339,6 +339,9 @@
     "addToFolder": "Adicionar som em {{folder}}",
     "managerInstanceDesc": "Sons padrão disponíveis para todos nesta instância.",
     "managerSpaceDesc": "Sons personalizados compartilhados com os membros deste servidor.",
-    "managerDmDesc": "Sons personalizados compartilhados com os membros deste grupo."
+    "managerDmDesc": "Sons personalizados compartilhados com os membros deste grupo.",
+    "slotUsage": "{{current}} de {{max}}",
+    "limitReached": "Este espaço atingiu o limite de efeitos sonoros da instância.",
+    "disabledByInstance": "Efeitos sonoros personalizados em servidores e grupos estão desativados pela instância."
   }
 }

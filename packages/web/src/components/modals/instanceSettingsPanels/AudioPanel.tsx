@@ -41,6 +41,7 @@ export function AudioPanel() {
       || draft.allowStereoAudio !== limits.allowStereoAudio
       || draft.defaultAudioBitrateKbps !== limits.defaultAudioBitrateKbps
       || draft.maxAudioBitrateKbps !== limits.maxAudioBitrateKbps
+      || (draft.maxSoundboardSoundsPerScope ?? 32) !== (limits.maxSoundboardSoundsPerScope ?? 32)
     ),
   );
 
@@ -188,8 +189,49 @@ export function AudioPanel() {
         )}
       </div>
 
-      {/* Instance Soundboard Defaults */}
-      <div className="border-t border-white/[0.04] pt-5">
+      {/* Instance Soundboard Defaults & Limit */}
+      <div className="border-t border-white/[0.04] pt-5 space-y-4">
+        {draft && (
+          <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-txt-primary">{t('admin:audio.maxSoundboardPerScope.label')}</div>
+                <div className="text-xs text-txt-tertiary">{t('admin:audio.maxSoundboardPerScope.description')}</div>
+              </div>
+              <input
+                type="number"
+                min={0}
+                max={200}
+                step={1}
+                value={draft.maxSoundboardSoundsPerScope ?? 32}
+                onChange={(e) => {
+                  const val = Math.max(0, Math.min(200, Math.round(Number(e.target.value) || 0)));
+                  setDraft({ ...draft, maxSoundboardSoundsPerScope: val });
+                }}
+                className="input-standard w-20 px-2.5 py-1 text-xs text-center tabular-nums shrink-0"
+              />
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={200}
+              step={1}
+              value={draft.maxSoundboardSoundsPerScope ?? 32}
+              onChange={(e) => setDraft({ ...draft, maxSoundboardSoundsPerScope: Number(e.target.value) })}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
+                [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+              style={{
+                background: (() => {
+                  const val = draft.maxSoundboardSoundsPerScope ?? 32;
+                  const pct = (val / 200) * 100;
+                  return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+                })(),
+              }}
+            />
+          </div>
+        )}
         <SoundboardManagerPanel scopeType="instance" scopeId={null} origin="" embedded />
       </div>
 

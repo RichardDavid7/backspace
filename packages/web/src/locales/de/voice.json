@@ -337,6 +337,9 @@
     "addToFolder": "Sound zu {{folder}} hinzufügen",
     "managerInstanceDesc": "Standard-Sounds, die allen auf dieser Instanz zur Verfügung stehen.",
     "managerSpaceDesc": "Benutzerdefinierte Sounds für Mitglieder dieses Spaces.",
-    "managerDmDesc": "Benutzerdefinierte Sounds für Mitglieder dieser Gruppe."
+    "managerDmDesc": "Benutzerdefinierte Sounds für Mitglieder dieser Gruppe.",
+    "slotUsage": "{{current}} von {{max}}",
+    "limitReached": "Dieser Bereich hat das Instanzlimit für eigene Sounds erreicht.",
+    "disabledByInstance": "Eigene Sounds für Spaces und Gruppen sind vom Instanz-Admin deaktiviert."
   }
 }

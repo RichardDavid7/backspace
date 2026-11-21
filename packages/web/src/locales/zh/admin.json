@@ -466,6 +466,10 @@
   },
   "audio": {
     "title": "音频",
-    "description": "配置此实例的语音编码限制和默认音效板片段。"
+    "description": "配置此实例的语音编码限制和默认音效板片段。",
+    "maxSoundboardPerScope": {
+      "label": "每个空间 / 群组的最大自定义音效数",
+      "description": "限制每个空间或群组可上传的音效板片段数量（0 表示禁用自定义上传）。"
+    }
   }
 }

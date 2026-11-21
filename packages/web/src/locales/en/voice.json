@@ -337,6 +337,9 @@
     "addToFolder": "Add sound to {{folder}}",
     "managerInstanceDesc": "Default sounds available to everyone on this instance.",
     "managerSpaceDesc": "Custom sounds shared with members of this space.",
-    "managerDmDesc": "Custom sounds shared with members of this group."
+    "managerDmDesc": "Custom sounds shared with members of this group.",
+    "slotUsage": "{{current}} / {{max}}",
+    "limitReached": "This space has reached the instance limit for custom sounds.",
+    "disabledByInstance": "Custom sounds for spaces and groups are disabled by the instance administrator."
   }
 }

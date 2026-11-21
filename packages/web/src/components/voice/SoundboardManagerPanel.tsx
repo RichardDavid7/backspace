@@ -43,6 +43,7 @@ export function SoundboardManagerPanel({
 
   const [sounds, setSounds] = useState<SoundboardSound[]>([]);
   const [canManage, setCanManage] = useState(false);
+  const [maxSoundsPerScope, setMaxSoundsPerScope] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
@@ -59,9 +60,11 @@ export function SoundboardManagerPanel({
       if (scopeType === 'instance') {
         setSounds(data.instanceSounds);
         setCanManage(data.canManageInstance);
+        setMaxSoundsPerScope(null);
       } else {
         setSounds(data.scopedSounds);
         setCanManage(data.canManageScope);
+        setMaxSoundsPerScope(data.maxSoundsPerScope ?? 32);
       }
     } catch {
       addToast(t('soundboard.loadFailed'), 'warning');
@@ -244,24 +247,37 @@ export function SoundboardManagerPanel({
       ? 'soundboard.managerSpaceDesc'
       : 'soundboard.managerDmDesc';
 
+  const isLimitReached = scopeType !== 'instance'
+    && maxSoundsPerScope !== null
+    && sounds.length >= maxSoundsPerScope;
+
   return (
     <div className={embedded ? 'space-y-2' : 'space-y-4'}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          {embedded ? (
-            <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1">
-              {t('soundboard.title')}
-            </div>
-          ) : (
-            <h2 className="text-lg font-semibold text-txt-primary">{t('soundboard.title')}</h2>
-          )}
-          <p className="text-xs text-txt-tertiary">{t(descriptionKey)}</p>
+          <div className="flex items-center gap-2">
+            {embedded ? (
+              <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">
+                {t('soundboard.title')}
+              </div>
+            ) : (
+              <h2 className="text-lg font-semibold text-txt-primary">{t('soundboard.title')}</h2>
+            )}
+            {scopeType !== 'instance' && maxSoundsPerScope !== null && (
+              <span className="px-2 py-0.5 rounded-full bg-surface-elevated text-[11px] font-mono tabular-nums text-txt-tertiary">
+                {t('soundboard.slotUsage', { current: sounds.length, max: maxSoundsPerScope })}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-txt-tertiary mt-0.5">{t(descriptionKey)}</p>
         </div>
         {canManage && (
           <button
             type="button"
+            disabled={isLimitReached}
             onClick={() => setEditor({ sound: null, defaultFolder: null })}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent-primary hover:bg-accent-primary/80 text-white text-xs font-medium transition-colors shrink-0 cursor-pointer"
+            title={isLimitReached ? t('soundboard.limitReached') : undefined}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent-primary hover:bg-accent-primary/80 text-white text-xs font-medium transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
@@ -270,6 +286,12 @@ export function SoundboardManagerPanel({
           </button>
         )}
       </div>
+
+      {isLimitReached && (
+        <div className="px-3 py-2 rounded-lg bg-accent-amber/10 border border-accent-amber/25 text-xs text-accent-amber">
+          {maxSoundsPerScope === 0 ? t('soundboard.disabledByInstance') : t('soundboard.limitReached')}
+        </div>
+      )}
 
       <div className={embedded ? 'rounded-lg bg-white/[0.02] p-3.5 space-y-3' : 'space-y-3'}>
         {loading ? (
@@ -311,7 +333,7 @@ export function SoundboardManagerPanel({
                       <span className="truncate">{folderName}</span>
                       <span className="text-xs text-txt-tertiary shrink-0">{folderSounds.length}</span>
                     </button>
-                    {canManage && (
+                    {canManage && !isLimitReached && (
                       <button
                         type="button"
                         onClick={() => setEditor({ sound: null, defaultFolder: folderName })}
