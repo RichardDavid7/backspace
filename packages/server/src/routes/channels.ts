@@ -396,6 +396,20 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
 
     const updates: Partial<typeof schema.channels.$inferInsert> = {};
 
+    const touchesAudio = audioBitrateKbps !== undefined
+      || maxAudioBitrateKbps !== undefined
+      || allowMusicMode !== undefined
+      || allowStereoAudio !== undefined;
+    if (touchesAudio && channel.type !== 'voice') {
+      return sendError(reply, 400, 'validation_failed');
+    }
+    if (allowMusicMode !== undefined && allowMusicMode !== null && typeof allowMusicMode !== 'boolean') {
+      return sendError(reply, 400, 'validation_failed');
+    }
+    if (allowStereoAudio !== undefined && allowStereoAudio !== null && typeof allowStereoAudio !== 'boolean') {
+      return sendError(reply, 400, 'validation_failed');
+    }
+
     if (name !== undefined) {
       if (typeof name !== 'string') {
         return sendError(reply, 400, 'channel_name_required');

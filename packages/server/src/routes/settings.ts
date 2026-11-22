@@ -322,6 +322,15 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
 
     db.update(schema.instanceSettings).set(updateData).where(eq(schema.instanceSettings.id, 1)).run();
 
+    // Keep per-channel bitrates within the (possibly lowered) instance maximum.
+    if (updateData.maxAudioBitrateKbps !== undefined) {
+      const raw = getRawDb();
+      raw.prepare('UPDATE channels SET max_audio_bitrate_kbps = ? WHERE max_audio_bitrate_kbps > ?')
+        .run(effectiveAudioMax, effectiveAudioMax);
+      raw.prepare('UPDATE channels SET audio_bitrate_kbps = ? WHERE audio_bitrate_kbps > ?')
+        .run(effectiveAudioMax, effectiveAudioMax);
+    }
+
     if (directoryDocumentChanged(updateData, currentRow)) {
       markDirectoryDirty(getRawDb());
     }

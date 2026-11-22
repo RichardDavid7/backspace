@@ -653,6 +653,8 @@ export function useLiveKit() {
       if (sb) {
         const limits = useSettingsStore.getState().streamingLimits;
         if (limits?.soundboardEnabled === false) return;
+        // Server-signed token attribute: `sb=0` means the sender lacks USE_SOUNDBOARD.
+        if (participant?.attributes?.sb === '0') return;
         const senderUserId = resolveParticipantUserId(participant.identity);
         const vs = useVoiceStore.getState();
         if (vs.soundboardMuted || vs.soundboardMutedUserIds.has(senderUserId)) {
