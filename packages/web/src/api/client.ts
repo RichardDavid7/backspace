@@ -455,6 +455,7 @@ export class BackspaceApiClient {
     create: (formData: FormData) => Promise<SoundboardSound>;
     update: (id: string, data: FormData | { name?: string; emoji?: string; folder?: string | null }) => Promise<SoundboardSound>;
     reorder: (scopeType: SoundboardScopeType, scopeId: string | null, orderedIds: string[]) => Promise<{ success: boolean }>;
+    renameFolder: (scopeType: SoundboardScopeType, scopeId: string | null, oldName: string, newName: string) => Promise<{ sounds: SoundboardSound[] }>;
     remove: (id: string) => Promise<{ success: boolean }>;
   };
 
@@ -605,6 +606,8 @@ export class BackspaceApiClient {
           : request<SoundboardSound>('PATCH', `/soundboard/${encodeURIComponent(id)}`, data),
       reorder: (scopeType, scopeId, orderedIds) =>
         request<{ success: boolean }>('PUT', '/soundboard/reorder', { scopeType, scopeId, orderedIds }),
+      renameFolder: (scopeType, scopeId, oldName, newName) =>
+        request<{ sounds: SoundboardSound[] }>('PUT', '/soundboard/folder', { scopeType, scopeId, oldName, newName }),
       remove: (id) => request<{ success: boolean }>('DELETE', `/soundboard/${encodeURIComponent(id)}`),
     };
 
