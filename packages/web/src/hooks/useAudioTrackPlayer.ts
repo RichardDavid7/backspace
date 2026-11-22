@@ -62,19 +62,71 @@ export function useAudioTrackPlayer(
     }
 
     // --- Keep-alive: attach track to <audio> element (always muted) ---
-    // Chrome needs an HTML element consuming the WebRTC track or it
-    // stops the audio pipeline for that track entirely.
+    // Chrome / Samsung Internet need a playing HTML media element consuming the
+    // WebRTC track or Chromium's audio pipeline outputs silence (zero samples) to
+    // MediaStreamAudioSourceNode — breaking both remote playback and SpeakingDetector.
+    // Mobile browsers can reject the initial play() if the remote track arrives
+    // outside a user gesture, so retry on the next gesture / visibility / resume.
+    const audioManager = AudioManager.getInstance();
+    let cleanupPlayRetry: (() => void) | null = null;
     if (audioEl) {
-      audioEl.srcObject = new MediaStream([track]);
+      audioEl.defaultMuted = true;
       audioEl.muted = true;
       audioEl.volume = 0;
-      audioEl.play().catch(() => {});
+      audioEl.srcObject = new MediaStream([track]);
+
+      const removeRetryListeners = () => {
+        if (!cleanupPlayRetry) return;
+        const fn = cleanupPlayRetry;
+        cleanupPlayRetry = null;
+        fn();
+      };
+
+      const attemptPlay = () => {
+        if (!audioEl.srcObject) return;
+        void audioEl.play().then(() => {
+          removeRetryListeners();
+        }).catch(() => {
+          // Will retry on next user gesture / resume / visibility change
+        });
+      };
+
+      const onGesture = () => {
+        void audioManager.resumeContext();
+        attemptPlay();
+      };
+      const onVisibility = () => {
+        if (document.visibilityState === 'visible' && audioEl.paused) {
+          void audioManager.resumeContext();
+          attemptPlay();
+        }
+      };
+
+      const unsubResume = audioManager.onResumed(() => {
+        if (audioEl.paused) attemptPlay();
+      });
+      document.addEventListener('touchstart', onGesture, { passive: true });
+      document.addEventListener('pointerdown', onGesture, { passive: true });
+      document.addEventListener('click', onGesture, { passive: true });
+      document.addEventListener('keydown', onGesture, { passive: true });
+      document.addEventListener('visibilitychange', onVisibility);
+
+      cleanupPlayRetry = () => {
+        unsubResume();
+        document.removeEventListener('touchstart', onGesture);
+        document.removeEventListener('pointerdown', onGesture);
+        document.removeEventListener('click', onGesture);
+        document.removeEventListener('keydown', onGesture);
+        document.removeEventListener('visibilitychange', onVisibility);
+      };
+
+      attemptPlay();
     }
 
     // --- Web Audio pipeline for actual output ---
-    const audioManager = AudioManager.getInstance();
     const releaseAudioSession = audioManager.acquireAudioSession();
     const ctx = audioManager.ensureContext();
+    void audioManager.resumeContext();
 
     const stream = new MediaStream([track]);
     const source = ctx.createMediaStreamSource(stream);
@@ -92,6 +144,8 @@ export function useAudioTrackPlayer(
     gainRef.current = gain;
 
     return () => {
+      cleanupPlayRetry?.();
+      cleanupPlayRetry = null;
       source.disconnect();
       gain.disconnect();
       sourceRef.current = null;

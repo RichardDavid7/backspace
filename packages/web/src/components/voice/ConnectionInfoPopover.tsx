@@ -97,8 +97,8 @@ function AudioTrackRow({
 }) {
   const label = trackLabel(track.direction, track.source, track.participantName);
   const isLocalMic = track.direction === 'send' && track.source === 'microphone';
-  const mode = track.opusMode ?? (isLocalMic ? localFallback?.opusMode ?? null : null);
-  const channels = track.channels ?? (isLocalMic ? localFallback?.channels ?? null : null);
+  const mode = isLocalMic ? (localFallback?.opusMode ?? track.opusMode) : track.opusMode;
+  const channels = isLocalMic ? (localFallback?.channels ?? track.channels) : track.channels;
 
   const metaParts: string[] = [];
   if (track.codec) metaParts.push(track.codec);
