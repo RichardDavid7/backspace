@@ -8,15 +8,15 @@ import { usePortalContainer } from '../../hooks/usePortalContainer';
 import { Modal } from '../ui/Modal';
 import { Toggle } from '../ui/Toggle';
 import {
+  computeNormalizeGain,
   computeWaveformPeaks,
-  findPeakAmplitude,
+  softLimitSample,
   trimAndNormalizeToWav,
 } from '../../utils/audioClipEditor';
 import { EmojiPicker } from '../chat/EmojiPicker';
 import { AudioManager } from '../../audio/AudioManager';
 
 const MAX_CLIP_SECONDS = 10;
-const TARGET_NORMALIZE_PEAK = 0.891; // -1 dBFS
 
 /**
  * Decode an audio file without opening a hardware AudioContext (avoids leaking
@@ -208,6 +208,15 @@ export function SoundboardEditorModal({
     setAudioDirty(true);
   };
 
+  const normalizeGain = useMemo(() => {
+    if (!audioBuffer) return 1;
+    const startSample = Math.max(0, Math.min(audioBuffer.length - 1, Math.floor(startSec * audioBuffer.sampleRate)));
+    const endSample = Math.max(startSample + 1, Math.min(audioBuffer.length, Math.ceil(endSec * audioBuffer.sampleRate)));
+    return computeNormalizeGain(audioBuffer, startSample, endSample);
+  }, [audioBuffer, startSec, endSec]);
+
+  const normalizeDb = useMemo(() => 20 * Math.log10(Math.max(1e-4, normalizeGain)), [normalizeGain]);
+
   const handlePreview = async () => {
     if (!audioBuffer) return;
     if (isPlayingPreview) {
@@ -223,19 +232,32 @@ export function SoundboardEditorModal({
       const ctx = audioManager.ensureContext();
 
       const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
+      let startOffset = startSec;
+      let playDuration = Math.max(0.05, endSec - startSec);
+
+      if (normalize) {
+        const sr = audioBuffer.sampleRate;
+        const startSample = Math.max(0, Math.min(audioBuffer.length - 1, Math.floor(startSec * sr)));
+        const endSample = Math.max(startSample + 1, Math.min(audioBuffer.length, Math.ceil(endSec * sr)));
+        const frameCount = endSample - startSample;
+        const numCh = Math.min(2, Math.max(1, audioBuffer.numberOfChannels));
+        const processed = ctx.createBuffer(numCh, frameCount, sr);
+        for (let ch = 0; ch < numCh; ch++) {
+          const src = audioBuffer.getChannelData(ch);
+          const dst = processed.getChannelData(ch);
+          for (let i = 0; i < frameCount; i++) {
+            dst[i] = softLimitSample((src[startSample + i] ?? 0) * normalizeGain);
+          }
+        }
+        source.buffer = processed;
+        startOffset = 0;
+        playDuration = frameCount / sr;
+      } else {
+        source.buffer = audioBuffer;
+      }
 
       const gain = ctx.createGain();
-      let previewGain = 0.85;
-      if (normalize) {
-        const startSample = Math.max(0, Math.floor(startSec * audioBuffer.sampleRate));
-        const endSample = Math.min(audioBuffer.length, Math.ceil(endSec * audioBuffer.sampleRate));
-        const peak = findPeakAmplitude(audioBuffer, startSample, endSample);
-        if (peak > 1e-4) {
-          previewGain = Math.min(8, (TARGET_NORMALIZE_PEAK / peak) * 0.85);
-        }
-      }
-      gain.gain.value = previewGain;
+      gain.gain.value = 0.85;
 
       source.connect(gain);
       gain.connect(audioManager.getMasterOutput());
@@ -252,7 +274,7 @@ export function SoundboardEditorModal({
 
       previewSourceRef.current = source;
       setIsPlayingPreview(true);
-      source.start(0, startSec, Math.max(0.05, endSec - startSec));
+      source.start(0, startOffset, playDuration);
     } catch {
       releasePreviewSessionRef.current?.();
       releasePreviewSessionRef.current = null;
@@ -517,11 +539,14 @@ export function SoundboardEditorModal({
               {peaks.map((peak, idx) => {
                 const pct = ((idx + 0.5) / peaks.length) * 100;
                 const inRange = pct >= startPct && pct <= endPct;
-                const heightPct = Math.max(8, Math.round(peak * 100));
+                const displayPeak = normalize && inRange
+                  ? Math.abs(softLimitSample(peak * normalizeGain))
+                  : peak;
+                const heightPct = Math.max(8, Math.min(100, Math.round(displayPeak * 100)));
                 return (
                   <div
                     key={idx}
-                    className={`flex-1 rounded-full transition-colors ${
+                    className={`flex-1 rounded-full transition-[height,background-color] duration-150 ${
                       inRange ? 'bg-accent-primary' : 'bg-white/15'
                     }`}
                     style={{ height: `${heightPct}%` }}
@@ -608,11 +633,25 @@ export function SoundboardEditorModal({
                 )}
               </button>
 
-              <div className="inline-flex items-center gap-2.5 text-xs text-txt-secondary">
+              <div className="inline-flex items-center gap-2 text-xs text-txt-secondary">
                 <span>{t('soundboard.normalizeVolume')}</span>
+                {normalize && Math.abs(normalizeDb) >= 0.2 && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono tabular-nums ${
+                      normalizeDb < 0
+                        ? 'bg-accent-amber/15 text-accent-amber'
+                        : 'bg-accent-primary/15 text-accent-primary'
+                    }`}
+                  >
+                    {t('soundboard.decibels', {
+                      value: `${normalizeDb > 0 ? '+' : ''}${normalizeDb.toFixed(1)}`,
+                    })}
+                  </span>
+                )}
                 <Toggle
                   enabled={normalize}
                   onChange={(enabled) => {
+                    stopPreview();
                     setNormalize(enabled);
                     setAudioDirty(true);
                   }}

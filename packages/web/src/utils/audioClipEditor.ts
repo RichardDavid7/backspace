@@ -1,9 +1,15 @@
 /**
  * Client-side Web Audio helpers for the Soundboard mini editor:
  * - Waveform peak extraction for visual trim preview
- * - Precision start/end trimming + optional peak normalization (-1 dBFS)
+ * - Precision start/end trimming + loudness (active RMS) normalization with soft peak ceiling (-1 dBFS)
  * - Dependency-free 16-bit PCM WAV encoding
  */
+
+/** Target active RMS loudness (~ -14 dBFS), matching typical voice/soundboard levels. */
+export const TARGET_NORMALIZE_RMS = 0.2;
+/** Peak ceiling (-1 dBFS) enforced by the soft limiter to prevent clipping. */
+export const NORMALIZE_PEAK_CEILING = 0.891;
+const SOFT_KNEE_START = 0.8;
 
 export function computeWaveformPeaks(buffer: AudioBuffer, barCount: number): number[] {
   const safeBars = Math.max(1, Math.min(200, Math.floor(barCount)));
@@ -40,8 +46,83 @@ export function findPeakAmplitude(buffer: AudioBuffer, startSample: number, endS
 }
 
 /**
- * Trims `buffer` to `[startSec, endSec]`, optionally peak-normalizing to -1 dBFS (~0.891),
- * and encodes the result as a standard 16-bit PCM WAV Blob.
+ * Computes active RMS loudness across all channels in [startSample, endSample),
+ * ignoring near-silent 20 ms windows (< -46 dBFS) so leading/trailing silence
+ * doesn't skew perceived loudness.
+ */
+export function computeActiveRms(buffer: AudioBuffer, startSample: number, endSample: number): number {
+  const numChannels = Math.max(1, buffer.numberOfChannels);
+  const totalFrames = Math.max(0, endSample - startSample);
+  if (totalFrames === 0) return 0;
+
+  const channels: Float32Array[] = [];
+  for (let ch = 0; ch < numChannels; ch++) {
+    channels.push(buffer.getChannelData(ch));
+  }
+
+  const windowSize = Math.max(1, Math.round(buffer.sampleRate * 0.02));
+  const silenceGateSq = 0.005 * 0.005; // ~ -46 dBFS
+  let activeSumSq = 0;
+  let activeCount = 0;
+  let globalSumSq = 0;
+  let globalCount = 0;
+
+  for (let wStart = startSample; wStart < endSample; wStart += windowSize) {
+    const wEnd = Math.min(endSample, wStart + windowSize);
+    let wSumSq = 0;
+    let wSamples = 0;
+    for (let i = wStart; i < wEnd; i++) {
+      for (let ch = 0; ch < numChannels; ch++) {
+        const s = channels[ch]![i] ?? 0;
+        wSumSq += s * s;
+        wSamples++;
+      }
+    }
+    if (wSamples === 0) continue;
+    globalSumSq += wSumSq;
+    globalCount += wSamples;
+    if (wSumSq / wSamples >= silenceGateSq) {
+      activeSumSq += wSumSq;
+      activeCount += wSamples;
+    }
+  }
+
+  if (activeCount > 0) {
+    return Math.sqrt(activeSumSq / activeCount);
+  }
+  return globalCount > 0 ? Math.sqrt(globalSumSq / globalCount) : 0;
+}
+
+/**
+ * Computes the linear gain needed to normalize [startSample, endSample) to
+ * TARGET_NORMALIZE_RMS (-14 dBFS), clamped to [0.15, 8.0] (~ -16 dB to +18 dB).
+ */
+export function computeNormalizeGain(
+  buffer: AudioBuffer,
+  startSample: number,
+  endSample: number,
+): number {
+  const rms = computeActiveRms(buffer, startSample, endSample);
+  if (rms <= 1e-4) return 1;
+  const rawGain = TARGET_NORMALIZE_RMS / rms;
+  return Math.max(0.15, Math.min(8, rawGain));
+}
+
+/**
+ * Soft-limits samples above SOFT_KNEE_START (0.80) smoothly toward NORMALIZE_PEAK_CEILING (-1 dBFS).
+ * Linear (zero distortion) below 0.80.
+ */
+export function softLimitSample(sample: number): number {
+  const abs = Math.abs(sample);
+  if (abs <= SOFT_KNEE_START) return sample;
+  const headroom = NORMALIZE_PEAK_CEILING - SOFT_KNEE_START;
+  const limited = SOFT_KNEE_START + headroom * Math.tanh((abs - SOFT_KNEE_START) / headroom);
+  return sample < 0 ? -limited : limited;
+}
+
+/**
+ * Trims `buffer` to `[startSec, endSec]`, optionally applying loudness normalization
+ * (-14 dBFS active RMS + soft peak ceiling at -1 dBFS), and encodes the result as a 16-bit PCM WAV Blob.
  */
 export function trimAndNormalizeToWav(
   buffer: AudioBuffer,
@@ -56,14 +137,7 @@ export function trimAndNormalizeToWav(
   const endSample = Math.max(startSample + 1, Math.min(totalSamples, Math.ceil(endSec * sampleRate)));
   const frameCount = endSample - startSample;
 
-  let gain = 1;
-  if (normalize) {
-    const peak = findPeakAmplitude(buffer, startSample, endSample);
-    if (peak > 0.0001) {
-      // Target -1 dBFS (~0.891) to maximize perceived loudness without clipping.
-      gain = 0.891 / peak;
-    }
-  }
+  const gain = normalize ? computeNormalizeGain(buffer, startSample, endSample) : 1;
 
   const bytesPerSample = 2;
   const dataByteLength = frameCount * numChannels * bytesPerSample;
@@ -99,9 +173,9 @@ export function trimAndNormalizeToWav(
   for (let i = 0; i < frameCount; i++) {
     const idx = startSample + i;
     for (let ch = 0; ch < numChannels; ch++) {
-      const sample = (channels[ch]![idx] ?? 0) * gain;
-      const clamped = Math.max(-1, Math.min(1, sample));
-      view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
+      const scaled = (channels[ch]![idx] ?? 0) * gain;
+      const sample = normalize ? softLimitSample(scaled) : Math.max(-1, Math.min(1, scaled));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
       offset += 2;
     }
   }

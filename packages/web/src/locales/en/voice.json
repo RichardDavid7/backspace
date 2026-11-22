@@ -369,6 +369,7 @@
     "hideInSpace": "Hide in this space",
     "showInSpace": "Show in this space",
     "overrideVolume": "Space volume",
-    "resetOverride": "Reset"
+    "resetOverride": "Reset",
+    "decibels": "{{value}} dB"
   }
 }

@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  computeNormalizeGain,
   computeWaveformPeaks,
   findPeakAmplitude,
+  softLimitSample,
   trimAndNormalizeToWav,
 } from './audioClipEditor';
 
@@ -37,9 +39,9 @@ describe('audioClipEditor', () => {
     expect(findPeakAmplitude(buf, 0, 4)).toBeCloseTo(0.9, 3);
   });
 
-  it('trims and normalizes audio into a valid 16-bit PCM WAV blob', async () => {
-    // 1 second of 8kHz quiet signal (peak 0.1)
-    const samples = new Array(8000).fill(0).map((_, i) => (i % 2 === 0 ? 0.1 : -0.1));
+  it('trims and loudness-normalizes quiet audio into a valid 16-bit PCM WAV blob', async () => {
+    // 1 second of 8kHz quiet signal (RMS 0.05)
+    const samples = new Array(8000).fill(0).map((_, i) => (i % 2 === 0 ? 0.05 : -0.05));
     const buf = makeFakeBuffer(samples, 8000);
 
     const { blob, durationMs } = trimAndNormalizeToWav(buf, 0.25, 0.75, true);
@@ -54,9 +56,30 @@ describe('audioClipEditor', () => {
     // 4000 samples * 2 bytes + 44 header bytes
     expect(ab.byteLength).toBe(44 + 4000 * 2);
 
-    // Normalized peak should be close to 0.891 * 32767 (~29195)
+    // Normalized RMS target is ~0.20 (~6553 in 16-bit PCM), boosted 4x from 0.05
     const firstSample = Math.abs(view.getInt16(44, true));
-    expect(firstSample).toBeGreaterThan(28000);
-    expect(firstSample).toBeLessThanOrEqual(32767);
+    expect(firstSample).toBeGreaterThan(6000);
+    expect(firstSample).toBeLessThan(7200);
+  });
+
+  it('attenuates overly loud audio to target loudness and soft-limits peaks below -1 dBFS', async () => {
+    // 1 second of 8kHz brickwalled loud signal (amplitude 0.95)
+    const samples = new Array(8000).fill(0).map((_, i) => (i % 2 === 0 ? 0.95 : -0.95));
+    const buf = makeFakeBuffer(samples, 8000);
+
+    const gain = computeNormalizeGain(buf, 0, 8000);
+    expect(gain).toBeLessThan(0.3);
+
+    const { blob } = trimAndNormalizeToWav(buf, 0, 0.5, true);
+    const ab = await blob.arrayBuffer();
+    const view = new DataView(ab);
+    const firstSample = Math.abs(view.getInt16(44, true));
+    // Attenuated down to ~0.20 * 32767 (~6553)
+    expect(firstSample).toBeGreaterThan(6000);
+    expect(firstSample).toBeLessThan(7200);
+
+    // Soft limiter caps extreme peaks strictly below 0.891 (-1 dBFS)
+    expect(Math.abs(softLimitSample(5.0))).toBeLessThanOrEqual(0.891);
+    expect(Math.abs(softLimitSample(-5.0))).toBeLessThanOrEqual(0.891);
   });
 });
