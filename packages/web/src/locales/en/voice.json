@@ -281,6 +281,16 @@
     "notFound": "No microphone detected.",
     "failed": "Could not access the microphone."
   },
+  "deviceAlerts": {
+    "micRestoreFailed": "Microphone could not be restored",
+    "micPermissionRevoked": "Microphone permission was revoked",
+    "micDisconnectedFallback": "Microphone disconnected — switched to system default",
+    "micDisconnected": "Microphone disconnected",
+    "cameraSwitchFailed": "Could not switch camera",
+    "cameraUnavailable": "Camera unavailable",
+    "cameraPermissionRevoked": "Camera permission was revoked",
+    "cameraDisconnected": "Camera disconnected"
+  },
   "soundboard": {
     "title": "Soundboard",
     "close": "Close",

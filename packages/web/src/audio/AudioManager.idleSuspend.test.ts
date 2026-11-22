@@ -281,4 +281,47 @@ describe('AudioManager idle suspension and keep-alive lifecycle', () => {
     await vi.advanceTimersByTimeAsync(1500);
     expect(mockCtx.suspend).toHaveBeenCalledTimes(1);
   });
+
+  it('treats setRnnoiseEnabled(false) as a no-op when RNNoise was never loaded', async () => {
+    const track = { stop: vi.fn(), onended: null as (() => void) | null };
+    const stream = { active: true, getTracks: () => [track] } as unknown as MediaStream;
+    vi.stubGlobal('navigator', {
+      mediaDevices: { getUserMedia: vi.fn(async () => stream) },
+    });
+    (mockCtx as unknown as { createMediaStreamSource: ReturnType<typeof vi.fn> }).createMediaStreamSource = vi.fn(() => ({
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    }));
+
+    await am.setInputDevice('mic-1');
+    const genBefore = am.getStreamGeneration();
+
+    await am.setRnnoiseEnabled(false);
+
+    expect(am.getStreamGeneration()).toBe(genBefore);
+    expect(track.stop).not.toHaveBeenCalled();
+    expect(am.hasActiveStream()).toBe(true);
+  });
+
+  it('resumes an iOS interrupted AudioContext on resumeContext()', async () => {
+    am.ensureContext();
+    (mockCtx as unknown as { state: string }).state = 'interrupted';
+    expect(am.isContextRunning()).toBe(false);
+
+    await am.resumeContext();
+
+    expect(mockCtx.resume).toHaveBeenCalledTimes(1);
+    expect(mockCtx.state).toBe('running');
+    expect(am.isContextRunning()).toBe(true);
+  });
+
+  it('schedules idle suspend when AudioContext transitions to interrupted while unused', async () => {
+    am.ensureContext();
+    (mockCtx as unknown as { state: string }).state = 'interrupted';
+    mockCtx.onstatechange?.();
+
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(mockCtx.suspend).toHaveBeenCalledTimes(1);
+    expect(mockCtx.state).toBe('suspended');
+  });
 });

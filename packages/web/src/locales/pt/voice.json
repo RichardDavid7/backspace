@@ -283,6 +283,16 @@
     "notFound": "Nenhum microfone encontrado.",
     "failed": "Não foi possível acessar o microfone."
   },
+  "deviceAlerts": {
+    "micRestoreFailed": "Não foi possível restaurar o microfone",
+    "micPermissionRevoked": "A permissão do microfone foi revogada",
+    "micDisconnectedFallback": "Microfone desconectado — alterado para o padrão do sistema",
+    "micDisconnected": "Microfone desconectado",
+    "cameraSwitchFailed": "Não foi possível trocar a câmera",
+    "cameraUnavailable": "Câmera indisponível",
+    "cameraPermissionRevoked": "A permissão da câmera foi revogada",
+    "cameraDisconnected": "Câmera desconectada"
+  },
   "soundboard": {
     "title": "Efeitos Sonoros",
     "close": "Fechar",

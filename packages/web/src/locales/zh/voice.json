@@ -279,6 +279,16 @@
     "notFound": "未检测到麦克风。",
     "failed": "无法访问麦克风。"
   },
+  "deviceAlerts": {
+    "micRestoreFailed": "无法恢复麦克风",
+    "micPermissionRevoked": "麦克风权限已被撤销",
+    "micDisconnectedFallback": "麦克风已断开连接 — 已切换至系统默认设备",
+    "micDisconnected": "麦克风已断开连接",
+    "cameraSwitchFailed": "无法切换摄像头",
+    "cameraUnavailable": "摄像头不可用",
+    "cameraPermissionRevoked": "摄像头权限已被撤销",
+    "cameraDisconnected": "摄像头已断开连接"
+  },
   "soundboard": {
     "title": "音效板",
     "close": "关闭",

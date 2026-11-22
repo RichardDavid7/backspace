@@ -285,6 +285,16 @@
     "notFound": "Микрофон не найден.",
     "failed": "Не удалось получить доступ к микрофону."
   },
+  "deviceAlerts": {
+    "micRestoreFailed": "Не удалось восстановить микрофон",
+    "micPermissionRevoked": "Разрешение на доступ к микрофону было отозвано",
+    "micDisconnectedFallback": "Микрофон отключён — переключено на устройство по умолчанию",
+    "micDisconnected": "Микрофон отключён",
+    "cameraSwitchFailed": "Не удалось переключить камеру",
+    "cameraUnavailable": "Камера недоступна",
+    "cameraPermissionRevoked": "Разрешение на доступ к камере было отозвано",
+    "cameraDisconnected": "Камера отключена"
+  },
   "soundboard": {
     "title": "Звуковая панель",
     "close": "Закрыть",

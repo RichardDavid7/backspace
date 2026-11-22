@@ -281,6 +281,16 @@
     "notFound": "Kein Mikrofon gefunden.",
     "failed": "Auf das Mikrofon konnte nicht zugegriffen werden."
   },
+  "deviceAlerts": {
+    "micRestoreFailed": "Das Mikrofon konnte nicht wiederhergestellt werden",
+    "micPermissionRevoked": "Die Mikrofonberechtigung wurde widerrufen",
+    "micDisconnectedFallback": "Mikrofon getrennt — auf Systemstandard umgeschaltet",
+    "micDisconnected": "Mikrofon getrennt",
+    "cameraSwitchFailed": "Kamera konnte nicht gewechselt werden",
+    "cameraUnavailable": "Kamera nicht verfügbar",
+    "cameraPermissionRevoked": "Die Kameraberechtigung wurde widerrufen",
+    "cameraDisconnected": "Kamera getrennt"
+  },
   "soundboard": {
     "title": "Soundboard-Effekte",
     "close": "Schließen",

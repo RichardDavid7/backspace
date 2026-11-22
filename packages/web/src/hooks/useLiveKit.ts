@@ -22,6 +22,7 @@ import { useVoiceStore, type AudioMode, type VoiceConnectionQuality } from '../s
 import { useSettingsStore } from '../stores/settingsStore';
 import { myRowForOrigin } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
+import i18n from '../i18n';
 import type { User } from '@backspace/shared';
 import { broadcastVoiceStatus, clearSpaceVoiceForDmCall } from '../utils/voice';
 import { consumeIntentionalCameraOff, markIntentionalCameraOff } from '../utils/voiceActions';
@@ -779,10 +780,7 @@ export function useLiveKit() {
           // we don't loop forever trying to re-acquire.
           if (err?.name === 'NotAllowedError') {
             useVoiceStore.getState().setMicPermissionDenied(true);
-            useUIStore.getState().addToast(
-              'Microphone access denied. You joined as a listener — tap "Allow microphone" to grant access.',
-              'warning',
-            );
+            useUIStore.getState().addToast(i18n.t('voice:micPrearm.denied'), 'warning');
             return;
           }
           throw err;
@@ -822,7 +820,7 @@ export function useLiveKit() {
       if (roomRef.current !== subscriberRoom || !subscriberRoom) return;
 
       const deviceId = useVoiceStore.getState().inputDeviceId;
-      let copy = 'Microphone could not be restored';
+      let copy = i18n.t('voice:deviceAlerts.micRestoreFailed');
 
       try {
         // Probe is intentionally constraint-free — we want to know whether the
@@ -842,23 +840,23 @@ export function useLiveKit() {
           await republishMicrophone(subscriberRoom, lastMicGenRef, lastPublishSigRef);
           return;
         } catch {
-          // copy already holds 'Microphone could not be restored'
+          // copy already holds micRestoreFailed
         }
       } catch (err: any) {
         if (err?.name === 'NotAllowedError') {
-          copy = 'Microphone permission was revoked';
+          copy = i18n.t('voice:deviceAlerts.micPermissionRevoked');
         } else if (err?.name === 'NotFoundError') {
           if (deviceId !== 'default') {
             // The configured device disappeared. Fall back to default — the
             // store update triggers syncMic via its dep array, which calls
             // republishMicrophone with the freshly acquired default stream.
             useVoiceStore.getState().setInputDevice('default');
-            copy = 'Microphone disconnected — switched to system default';
+            copy = i18n.t('voice:deviceAlerts.micDisconnectedFallback');
           } else {
-            copy = 'Microphone disconnected';
+            copy = i18n.t('voice:deviceAlerts.micDisconnected');
           }
         } else {
-          copy = 'Microphone could not be restored';
+          copy = i18n.t('voice:deviceAlerts.micRestoreFailed');
         }
       }
 
@@ -902,7 +900,7 @@ export function useLiveKit() {
         // A newer device-switch attempt has superseded ours. Don't write stale
         // rollback state; let the newer attempt's outcome stand.
         if (myGen !== switchCameraGenRef.current) {
-          useUIStore.getState().addToast('Could not switch camera', 'warning');
+          useUIStore.getState().addToast(i18n.t('voice:deviceAlerts.cameraSwitchFailed'), 'warning');
           return;
         }
         const stillLive = camPub.track?.mediaStreamTrack?.readyState === 'live';
@@ -922,7 +920,7 @@ export function useLiveKit() {
           useVoiceStore.setState({ isCameraOn: false });
           broadcastVoiceStatus();
         }
-        useUIStore.getState().addToast('Could not switch camera', 'warning');
+        useUIStore.getState().addToast(i18n.t('voice:deviceAlerts.cameraSwitchFailed'), 'warning');
       }
     })();
   }, [cameraDeviceId, isCameraOn, isConnected]);
@@ -1121,7 +1119,7 @@ export function useLiveKit() {
               // Re-probe getUserMedia to distinguish hardware unplug from
               // OS-level permission revoke. Keep the probe short and tolerant.
               const deviceId = useVoiceStore.getState().cameraDeviceId;
-              let copy = 'Camera unavailable';
+              let copy = i18n.t('voice:deviceAlerts.cameraUnavailable');
               try {
                 const probe = await navigator.mediaDevices.getUserMedia({
                   video: deviceId ? { deviceId: { exact: deviceId } } : true,
@@ -1129,8 +1127,8 @@ export function useLiveKit() {
                 probe.getTracks().forEach(t => t.stop());
                 // Probe succeeded — reason is unknown; keep generic copy.
               } catch (err: any) {
-                if (err?.name === 'NotAllowedError') copy = 'Camera permission was revoked';
-                else if (err?.name === 'NotFoundError') copy = 'Camera disconnected';
+                if (err?.name === 'NotAllowedError') copy = i18n.t('voice:deviceAlerts.cameraPermissionRevoked');
+                else if (err?.name === 'NotFoundError') copy = i18n.t('voice:deviceAlerts.cameraDisconnected');
                 // Any other error → keep generic copy.
               }
 
