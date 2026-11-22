@@ -149,4 +149,38 @@ describe('soundboard MANAGE_SOUNDBOARD role permission', () => {
     expect(listRes.statusCode).toBe(200);
     expect(listRes.json().canManageScope).toBe(true);
   });
+
+  it('renames a folder only for members with MANAGE_SOUNDBOARD', async () => {
+    testDb.insert(schema.soundboardSounds).values({
+      id: 'snd-1',
+      scopeType: 'space',
+      scopeId: SPACE_ID,
+      name: 'Clip',
+      emoji: '🔊',
+      folder: 'Memes',
+      fileName: 'clip.wav',
+      mimeType: 'audio/wav',
+      durationMs: 1000,
+      position: 0,
+      uploadedBy: 'owner',
+      createdAt: now,
+    }).run();
+
+    currentUserId = 'member';
+    const denied = await app.inject({
+      method: 'PUT',
+      url: '/api/soundboard/folder',
+      payload: { scopeType: 'space', scopeId: SPACE_ID, oldName: 'Memes', newName: 'Clássicos' },
+    });
+    expect(denied.statusCode).toBe(403);
+
+    currentUserId = 'dj';
+    const ok = await app.inject({
+      method: 'PUT',
+      url: '/api/soundboard/folder',
+      payload: { scopeType: 'space', scopeId: SPACE_ID, oldName: 'Memes', newName: 'Clássicos' },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().sounds[0].folder).toBe('Clássicos');
+  });
 });

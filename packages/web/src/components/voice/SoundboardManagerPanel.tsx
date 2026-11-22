@@ -48,6 +48,9 @@ export function SoundboardManagerPanel({
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
+  const [folderNameDraft, setFolderNameDraft] = useState('');
+  const [savingFolder, setSavingFolder] = useState(false);
 
   const fetchSounds = useCallback(async () => {
     setLoading(true);
@@ -85,6 +88,44 @@ export function SoundboardManagerPanel({
       else next.add(folderName);
       return next;
     });
+  };
+
+  const handleStartRenameFolder = (folderName: string) => {
+    setRenamingFolder(folderName);
+    setFolderNameDraft(folderName);
+  };
+
+  const handleCancelRenameFolder = () => {
+    setRenamingFolder(null);
+    setFolderNameDraft('');
+  };
+
+  const handleSaveRenameFolder = async () => {
+    if (!renamingFolder || savingFolder) return;
+    const trimmed = folderNameDraft.trim().slice(0, 32);
+    if (!trimmed || trimmed === renamingFolder) {
+      handleCancelRenameFolder();
+      return;
+    }
+    setSavingFolder(true);
+    try {
+      const client = getApiForOrigin(origin);
+      const res = await client.soundboard.renameFolder(scopeType, scopeId, renamingFolder, trimmed);
+      setSounds(res.sounds);
+      setCollapsedFolders((prev) => {
+        if (!prev.has(renamingFolder)) return prev;
+        const next = new Set(prev);
+        next.delete(renamingFolder);
+        next.add(trimmed);
+        return next;
+      });
+      addToast(t('soundboard.folderRenamed'), 'success');
+      handleCancelRenameFolder();
+    } catch {
+      addToast(t('soundboard.saveFailed'), 'warning');
+    } finally {
+      setSavingFolder(false);
+    }
   };
 
   const handlePreview = (sound: SoundboardSound) => {
@@ -324,40 +365,108 @@ export function SoundboardManagerPanel({
                   className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-3 space-y-2.5"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleFolder(folderName)}
-                      className="flex items-center gap-2 min-w-0 flex-1 text-left text-sm font-medium text-txt-primary hover:text-accent-primary transition-colors cursor-pointer"
-                    >
-                      <svg
-                        className={`w-4 h-4 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        aria-hidden="true"
+                    {renamingFolder === folderName ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void handleSaveRenameFolder();
+                        }}
+                        className="flex items-center gap-1.5 flex-1 min-w-0"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-                      </svg>
-                      <svg className="w-4 h-4 shrink-0 text-accent-primary/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-                      </svg>
-                      <span className="truncate">{folderName}</span>
-                      <span className="text-xs text-txt-tertiary shrink-0">{folderSounds.length}</span>
-                    </button>
-                    {canManage && !isLimitReached && (
-                      <button
-                        type="button"
-                        onClick={() => setEditor({ sound: null, defaultFolder: folderName })}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
-                        aria-label={t('soundboard.addToFolder', { folder: folderName })}
-                        title={t('soundboard.addToFolder', { folder: folderName })}
-                      >
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                        <svg className="w-4 h-4 shrink-0 text-accent-primary/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                         </svg>
-                        <span>{t('soundboard.addButton')}</span>
-                      </button>
+                        <input
+                          type="text"
+                          value={folderNameDraft}
+                          onChange={(e) => setFolderNameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') handleCancelRenameFolder();
+                          }}
+                          maxLength={32}
+                          autoFocus
+                          disabled={savingFolder}
+                          aria-label={t('soundboard.renameFolder')}
+                          className="input-standard flex-1 min-w-0 px-2 py-1 text-xs"
+                        />
+                        <button
+                          type="submit"
+                          disabled={savingFolder || !folderNameDraft.trim()}
+                          className="p-1.5 rounded-md text-accent-mint hover:bg-interactive-hover transition-colors disabled:opacity-40 cursor-pointer"
+                          aria-label={t('soundboard.save')}
+                          title={t('soundboard.save')}
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelRenameFolder}
+                          disabled={savingFolder}
+                          className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
+                          aria-label={t('soundboard.cancel')}
+                          title={t('soundboard.cancel')}
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => toggleFolder(folderName)}
+                          className="flex items-center gap-2 min-w-0 flex-1 text-left text-sm font-medium text-txt-primary hover:text-accent-primary transition-colors cursor-pointer"
+                        >
+                          <svg
+                            className={`w-4 h-4 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            aria-hidden="true"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                          </svg>
+                          <svg className="w-4 h-4 shrink-0 text-accent-primary/80" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                          </svg>
+                          <span className="truncate">{folderName}</span>
+                          <span className="text-xs text-txt-tertiary shrink-0">{folderSounds.length}</span>
+                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => handleStartRenameFolder(folderName)}
+                              className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
+                              aria-label={t('soundboard.renameFolder')}
+                              title={t('soundboard.renameFolder')}
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                          )}
+                          {canManage && !isLimitReached && (
+                            <button
+                              type="button"
+                              onClick={() => setEditor({ sound: null, defaultFolder: folderName })}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
+                              aria-label={t('soundboard.addToFolder', { folder: folderName })}
+                              title={t('soundboard.addToFolder', { folder: folderName })}
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                              </svg>
+                              <span>{t('soundboard.addButton')}</span>
+                            </button>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
 

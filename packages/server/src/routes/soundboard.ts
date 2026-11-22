@@ -388,6 +388,42 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(200).send({ sounds: rows.map(rowToSound) });
   });
 
+  // PUT /api/soundboard/folder — rename a folder within a scope
+  app.put<{ Body: { scopeType: SoundboardScopeType; scopeId: string; oldName: string; newName: string } }>('/api/soundboard/folder', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { scopeType, oldName, newName } = request.body;
+    const scopeId = scopeType === 'instance' ? 'instance' : request.body.scopeId;
+    if (!canManageScope(request.userId, scopeType, scopeId)) {
+      return sendError(reply, 403, 'forbidden');
+    }
+    const trimmedOld = typeof oldName === 'string' ? oldName.trim() : '';
+    const trimmedNew = typeof newName === 'string' ? newName.trim().slice(0, MAX_SOUNDBOARD_FOLDER) : '';
+    if (!trimmedOld || !trimmedNew) {
+      return sendError(reply, 400, 'validation_failed');
+    }
+
+    const db = getDb();
+    db.update(schema.soundboardSounds)
+      .set({ folder: trimmedNew })
+      .where(and(
+        eq(schema.soundboardSounds.scopeType, scopeType),
+        eq(schema.soundboardSounds.scopeId, scopeId),
+        eq(schema.soundboardSounds.folder, trimmedOld),
+      ))
+      .run();
+
+    const rows = db.select()
+      .from(schema.soundboardSounds)
+      .where(and(
+        eq(schema.soundboardSounds.scopeType, scopeType),
+        eq(schema.soundboardSounds.scopeId, scopeId),
+      ))
+      .orderBy(asc(schema.soundboardSounds.position), asc(schema.soundboardSounds.createdAt))
+      .all();
+    return reply.code(200).send({ sounds: rows.map(rowToSound) });
+  });
+
   // DELETE /api/soundboard/:id
   app.delete<{ Params: { id: string } }>('/api/soundboard/:id', {
     preHandler: authenticate,
