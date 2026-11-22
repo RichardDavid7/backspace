@@ -191,14 +191,22 @@ export function StatusPickerPopover({
   const [revertRecord, setRevertRecord] = useState<StatusRevertRecord | null>(() => readRevertRecord(user.id));
   const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
   const popoverRef = React.useRef<HTMLDivElement>(null);
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Reset chosen duration and refresh active revert record only when opening
+  // (or switching users), never when the parent re-renders with a new inline onClose.
+  useEffect(() => {
+    if (!open) return;
+    setDuration('none');
+    setRevertRecord(readRevertRecord(user.id));
+  }, [open, user.id]);
 
   useEffect(() => {
     if (!open) {
       setPos(null);
       return;
     }
-    setDuration('none');
-    setRevertRecord(readRevertRecord(user.id));
     const updatePos = () => {
       const el = anchorRef.current;
       if (!el) return;
@@ -219,10 +227,10 @@ export function StatusPickerPopover({
       const target = e.target as Node;
       if (anchorRef.current?.contains(target)) return;
       if (popoverRef.current?.contains(target)) return;
-      onClose();
+      onCloseRef.current();
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     window.addEventListener('resize', updatePos);
     document.addEventListener('mousedown', onPointerDown);
@@ -234,7 +242,7 @@ export function StatusPickerPopover({
       document.removeEventListener('touchstart', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, anchorRef, onClose, placement, user.id]);
+  }, [open, anchorRef, placement]);
 
   if (!open || !pos) return null;
 

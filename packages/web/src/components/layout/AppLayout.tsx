@@ -34,6 +34,7 @@ import { ToastContainer } from '../ui/ToastContainer';
 import { UpdateToast } from '../ui/UpdateToast';
 import { InstanceUpdateToast } from '../ui/InstanceUpdateToast';
 import { ContextMenuRenderer } from '../ui/ContextMenuRenderer';
+import { useStatusRevertBootstrap } from '../ui/StatusPickerPopover';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import { useWebSocket } from '../../hooks/useWebSocket';
@@ -272,6 +273,9 @@ export function AppLayout() {
 
   // Deep link handler for Electron (backspace:// protocol)
   useDeepLinkHandler();
+
+  // Resume any pending status-revert timer across both desktop and mobile shells
+  useStatusRevertBootstrap();
 
   // Electron activity detection bridge (game/app process scanning → activityStore)
   useEffect(() => {

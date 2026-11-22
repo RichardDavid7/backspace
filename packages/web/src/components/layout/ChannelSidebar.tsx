@@ -12,7 +12,7 @@ import { VoiceChannel } from '../voice/VoiceChannel';
 import { VoiceControls } from '../voice/VoiceControls';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { Avatar } from '../ui/Avatar';
-import { StatusPickerPopover, useStatusRevertBootstrap } from '../ui/StatusPickerPopover';
+import { StatusPickerPopover } from '../ui/StatusPickerPopover';
 import { Mascot } from '../ui/Mascot';
 import { wsSend } from '../../hooks/useWebSocket';
 import { AudioManager } from '../../audio/AudioManager';
@@ -881,7 +881,6 @@ function UserAreaPanel({
   const [openPanel, setOpenPanel] = useState<'input' | 'output' | null>(null);
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const profileBoxRef = useRef<HTMLButtonElement>(null);
-  useStatusRevertBootstrap();
   const inputDeviceId = useVoiceStore((s) => s.inputDeviceId);
   const outputDeviceId = useVoiceStore((s) => s.outputDeviceId);
   const setInputDevice = useVoiceStore((s) => s.setInputDevice);
