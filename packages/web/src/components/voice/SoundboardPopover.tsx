@@ -40,6 +40,8 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   const [instanceSounds, setInstanceSounds] = useState<SoundboardSound[]>([]);
   const [scopeSounds, setScopeSounds] = useState<SoundboardSound[]>([]);
   const [maxConcurrentSounds, setMaxConcurrentSounds] = useState(3);
+  const [soundboardEnabledInSpace, setSoundboardEnabledInSpace] = useState(true);
+  const [allowInstanceSounds, setAllowInstanceSounds] = useState(true);
   const [loading, setLoading] = useState(false);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,6 +57,8 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       setInstanceSounds(data.instanceSounds);
       setScopeSounds(data.scopedSounds);
       setMaxConcurrentSounds(data.maxConcurrentSounds ?? 3);
+      setSoundboardEnabledInSpace(data.soundboardEnabled ?? true);
+      setAllowInstanceSounds(data.spaceSettings?.allowInstanceSounds ?? true);
     } catch {
       addToast(t('soundboard.loadFailed'), 'warning');
     } finally {
@@ -95,9 +99,11 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       markUserPlayingSoundboard(myUserId, sound.emoji, sound.name, sound.durationMs);
     }
 
+    const clipScale = Math.max(0, Math.min(1, (sound.volumeOverride ?? 100) / 100));
+
     if (!isDeafened && !soundboardMuted) {
       void AudioManager.getInstance()
-        .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 })
+        .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 * clipScale })
         .then((res) => {
           if (!res) {
             finishSoundboardClip(sound.id);
@@ -128,6 +134,7 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
         name: sound.name,
         senderUserId: myUserId ?? room.localParticipant.identity.split(':')[0] ?? '',
         durationMs: sound.durationMs,
+        ...(clipScale < 1 ? { volumeScale: clipScale } : {}),
       });
       room.localParticipant.publishData(new Uint8Array(payload), { reliable: true }).catch(() => {});
     }
@@ -141,10 +148,11 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     const resolvedUrl = sound.fileUrl.startsWith('/') && origin
       ? `${origin}${sound.fileUrl}`
       : sound.fileUrl;
+    const clipScale = Math.max(0, Math.min(1, (sound.volumeOverride ?? 100) / 100));
 
     setPreviewingId(sound.id);
     void AudioManager.getInstance()
-      .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 })
+      .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 * clipScale })
       .then((res) => {
         if (!res) {
           setPreviewingId((curr) => (curr === sound.id ? null : curr));
@@ -368,6 +376,10 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           <div className="py-6 text-center text-xs text-txt-tertiary">
             {t('soundboard.loading')}
           </div>
+        ) : !soundboardEnabledInSpace ? (
+          <div className="py-6 px-3 text-center text-xs text-txt-tertiary rounded-lg bg-white/[0.02] border border-white/[0.05]">
+            {t('soundboard.disabledInSpace')}
+          </div>
         ) : (
           <>
             {spaceId && renderSection(
@@ -377,7 +389,7 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
               spaceId,
             )}
 
-            {renderSection(
+            {allowInstanceSounds && renderSection(
               t('soundboard.instanceSection'),
               instanceSounds,
               'instance',

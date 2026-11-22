@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin } from '../../stores/spaceStore';
 import { useSettingsStore, selectStreamingLimits } from '../../stores/settingsStore';
-import { Toggle } from '../ui/Toggle';
 import { PermissionBits, hasPermissionBit, isHiddenFromEveryone } from '../../utils/permissions';
+import { resolveAudioPolicyHierarchy, type ResolvedAudioPolicy } from '../../utils/audioPolicy';
 import { InlineNameEditor } from '../ui/InlineNameEditor';
 import { PermissionsEditor } from '../ui/PermissionsEditor';
 import type { PermissionDef } from '../ui/OverrideEntry';
@@ -14,6 +14,7 @@ import { describeError } from '../../i18n/errors';
 import { useEntityOverrides } from '../../hooks/useEntityOverrides';
 import { PrivacySetting } from './PrivacySetting';
 import { ChannelTopicEditor } from './ChannelTopicEditor';
+import { VoiceAudioSettingsCard, type VoiceAudioSettingsPatch } from './VoiceAudioSettingsCard';
 import { LOCK_ICON } from '../ui/LockNote';
 import { CHANNEL_NAME_MAX_LENGTH, normalizeChannelName } from '@backspace/shared/src/constants';
 
@@ -43,17 +44,6 @@ const VOICE_CHANNEL_PERMISSIONS: PermissionDef[] = [
 
 const CHANNEL_ICON_PUBLIC = 'M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z';
 
-const SLIDER_COMMIT_KEYS = new Set([
-  'ArrowLeft',
-  'ArrowRight',
-  'ArrowUp',
-  'ArrowDown',
-  'Home',
-  'End',
-  'PageUp',
-  'PageDown',
-]);
-
 // ─── Overview Tab ───────────────────────────────────────────────────────────────
 
 function OverviewTab({
@@ -65,10 +55,7 @@ function OverviewTab({
   channelMaxAudioBitrateKbps,
   channelAllowMusicMode,
   channelAllowStereoAudio,
-  instanceDefaultAudioBitrate,
-  instanceMaxAudioBitrate,
-  instanceAllowMusicMode,
-  instanceAllowStereoAudio,
+  parentAudioPolicy,
   isPrivate,
   isFetching,
   isLoading,
@@ -89,10 +76,7 @@ function OverviewTab({
   channelMaxAudioBitrateKbps: number | null;
   channelAllowMusicMode: boolean | null;
   channelAllowStereoAudio: boolean | null;
-  instanceDefaultAudioBitrate: number;
-  instanceMaxAudioBitrate: number;
-  instanceAllowMusicMode: boolean;
-  instanceAllowStereoAudio: boolean;
+  parentAudioPolicy: ResolvedAudioPolicy;
   isPrivate: boolean;
   isFetching: boolean;
   isLoading: boolean;
@@ -103,54 +87,9 @@ function OverviewTab({
   onDeleteChannel: () => void;
   onRename: (name: string) => Promise<void>;
   onSaveTopic: (topic: string | null) => Promise<void>;
-  onSaveAudioSettings: (patch: {
-    audioBitrateKbps?: number | null;
-    maxAudioBitrateKbps?: number | null;
-    allowMusicMode?: boolean | null;
-    allowStereoAudio?: boolean | null;
-  }) => Promise<void>;
+  onSaveAudioSettings: (patch: VoiceAudioSettingsPatch) => Promise<void>;
 }) {
   const { t } = useTranslation(['spaces', 'common']);
-  const [bitrateDraft, setBitrateDraft] = useState<number>(
-    channelAudioBitrateKbps ?? instanceDefaultAudioBitrate,
-  );
-  const [maxBitrateDraft, setMaxBitrateDraft] = useState<number>(
-    channelMaxAudioBitrateKbps ?? instanceMaxAudioBitrate,
-  );
-  const lastCommittedBitrateRef = useRef<number | null>(channelAudioBitrateKbps);
-  const lastCommittedMaxBitrateRef = useRef<number | null>(channelMaxAudioBitrateKbps);
-  useEffect(() => {
-    setBitrateDraft(channelAudioBitrateKbps ?? instanceDefaultAudioBitrate);
-    lastCommittedBitrateRef.current = channelAudioBitrateKbps;
-  }, [channelAudioBitrateKbps, instanceDefaultAudioBitrate]);
-  useEffect(() => {
-    setMaxBitrateDraft(channelMaxAudioBitrateKbps ?? instanceMaxAudioBitrate);
-    lastCommittedMaxBitrateRef.current = channelMaxAudioBitrateKbps;
-  }, [channelMaxAudioBitrateKbps, instanceMaxAudioBitrate]);
-
-  const commitBitrate = (value: number) => {
-    if (value === lastCommittedBitrateRef.current) return;
-    lastCommittedBitrateRef.current = value;
-    void onSaveAudioSettings({ audioBitrateKbps: value });
-  };
-  const commitMaxBitrate = (value: number) => {
-    if (value === lastCommittedMaxBitrateRef.current) return;
-    lastCommittedMaxBitrateRef.current = value;
-    void onSaveAudioSettings({ maxAudioBitrateKbps: value });
-  };
-
-  const isAutoMaxBitrate = channelMaxAudioBitrateKbps === null;
-  const clampedMaxDraft = Math.min(instanceMaxAudioBitrate, Math.max(8, maxBitrateDraft));
-  const effectiveMaxCap = isAutoMaxBitrate ? instanceMaxAudioBitrate : clampedMaxDraft;
-  const maxSliderSpan = Math.max(1, instanceMaxAudioBitrate - 8);
-  const maxSliderPct = ((clampedMaxDraft - 8) / maxSliderSpan) * 100;
-
-  const isAutoBitrate = channelAudioBitrateKbps === null;
-  const clampedDraft = Math.min(effectiveMaxCap, Math.max(8, bitrateDraft));
-  const sliderSpan = Math.max(1, effectiveMaxCap - 8);
-  const sliderPct = ((clampedDraft - 8) / sliderSpan) * 100;
-  const effectiveAllowMusic = instanceAllowMusicMode && (channelAllowMusicMode ?? true);
-  const effectiveAllowStereo = instanceAllowStereoAudio && (channelAllowStereoAudio ?? true);
   return (
     <div className="space-y-4">
       <div>
@@ -179,146 +118,17 @@ function OverviewTab({
         <ChannelTopicEditor key={channelId} topic={channelTopic} canEdit={canManageChannels} onSave={onSaveTopic} />
       )}
 
-      {/* Voice channels: per-channel Opus bitrate & Music mode toggle */}
+      {/* Voice channels: per-channel Opus bitrate & Music/Stereo policy */}
       {channelType === 'voice' && canManageChannels && (
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">
-            {t('spaces:channel.settings.voiceAudio.sectionTitle')}
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-txt-primary">{t('spaces:channel.settings.voiceAudio.autoBitrate.label')}</div>
-              <div className="text-xs text-txt-tertiary">
-                {t('spaces:channel.settings.voiceAudio.autoBitrate.description', { kbps: instanceDefaultAudioBitrate })}
-              </div>
-            </div>
-            <Toggle
-              enabled={isAutoBitrate}
-              onChange={(auto) => {
-                void onSaveAudioSettings({
-                  audioBitrateKbps: auto ? null : clampedDraft,
-                });
-              }}
-              ariaLabel={t('spaces:channel.settings.voiceAudio.autoBitrate.label')}
-            />
-          </div>
-
-          {!isAutoBitrate && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-txt-secondary">{t('spaces:channel.settings.voiceAudio.bitrateLabel')}</span>
-                <span className="text-xs text-txt-primary font-medium tabular-nums">
-                  {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
-                  {clampedDraft} kbps
-                </span>
-              </div>
-              <input
-                type="range"
-                min={8}
-                max={effectiveMaxCap}
-                step={8}
-                value={clampedDraft}
-                onChange={(e) => setBitrateDraft(Number(e.target.value))}
-                onPointerUp={() => commitBitrate(clampedDraft)}
-                onKeyUp={(e) => {
-                  if (SLIDER_COMMIT_KEYS.has(e.key)) commitBitrate(clampedDraft);
-                }}
-                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
-                style={{
-                  background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${sliderPct}%, rgb(var(--interactive-muted)) ${sliderPct}%, rgb(var(--interactive-muted)) 100%)`,
-                }}
-              />
-            </div>
-          )}
-
-          {/* Per-channel Max Audio Bitrate cap */}
-          <div className="flex items-center justify-between gap-3 pt-1 border-t border-white/[0.04]">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-txt-primary">{t('spaces:channel.settings.voiceAudio.autoMaxBitrate.label')}</div>
-              <div className="text-xs text-txt-tertiary">
-                {t('spaces:channel.settings.voiceAudio.autoMaxBitrate.description', { kbps: instanceMaxAudioBitrate })}
-              </div>
-            </div>
-            <Toggle
-              enabled={isAutoMaxBitrate}
-              onChange={(auto) => {
-                void onSaveAudioSettings({
-                  maxAudioBitrateKbps: auto ? null : clampedMaxDraft,
-                });
-              }}
-              ariaLabel={t('spaces:channel.settings.voiceAudio.autoMaxBitrate.label')}
-            />
-          </div>
-
-          {!isAutoMaxBitrate && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-txt-secondary">{t('spaces:channel.settings.voiceAudio.maxBitrateLabel')}</span>
-                <span className="text-xs text-txt-primary font-medium tabular-nums">
-                  {/* i18n-check: allow-literal "kbps" is an SI audio bitrate unit */}
-                  {clampedMaxDraft} kbps
-                </span>
-              </div>
-              <input
-                type="range"
-                min={8}
-                max={instanceMaxAudioBitrate}
-                step={8}
-                value={clampedMaxDraft}
-                onChange={(e) => setMaxBitrateDraft(Number(e.target.value))}
-                onPointerUp={() => commitMaxBitrate(clampedMaxDraft)}
-                onKeyUp={(e) => {
-                  if (SLIDER_COMMIT_KEYS.has(e.key)) commitMaxBitrate(clampedMaxDraft);
-                }}
-                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
-                style={{
-                  background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${maxSliderPct}%, rgb(var(--interactive-muted)) ${maxSliderPct}%, rgb(var(--interactive-muted)) 100%)`,
-                }}
-              />
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-3 pt-1 border-t border-white/[0.04]">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-txt-primary">{t('spaces:channel.settings.voiceAudio.allowMusicMode.label')}</div>
-              <div className="text-xs text-txt-tertiary">
-                {instanceAllowMusicMode
-                  ? t('spaces:channel.settings.voiceAudio.allowMusicMode.description')
-                  : t('spaces:channel.settings.voiceAudio.allowMusicMode.disabledByInstance')}
-              </div>
-            </div>
-            <Toggle
-              enabled={effectiveAllowMusic}
-              disabled={!instanceAllowMusicMode}
-              onChange={(enabled) => {
-                if (!instanceAllowMusicMode) return;
-                void onSaveAudioSettings({ allowMusicMode: enabled });
-              }}
-              ariaLabel={t('spaces:channel.settings.voiceAudio.allowMusicMode.label')}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 pt-1">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-txt-primary">{t('spaces:channel.settings.voiceAudio.allowStereoAudio.label')}</div>
-              <div className="text-xs text-txt-tertiary">
-                {instanceAllowStereoAudio
-                  ? t('spaces:channel.settings.voiceAudio.allowStereoAudio.description')
-                  : t('spaces:channel.settings.voiceAudio.allowStereoAudio.disabledByInstance')}
-              </div>
-            </div>
-            <Toggle
-              enabled={effectiveAllowStereo}
-              disabled={!instanceAllowStereoAudio}
-              onChange={(enabled) => {
-                if (!instanceAllowStereoAudio) return;
-                void onSaveAudioSettings({ allowStereoAudio: enabled });
-              }}
-              ariaLabel={t('spaces:channel.settings.voiceAudio.allowStereoAudio.label')}
-            />
-          </div>
-        </div>
+        <VoiceAudioSettingsCard
+          scope="channel"
+          audioBitrateKbps={channelAudioBitrateKbps}
+          maxAudioBitrateKbps={channelMaxAudioBitrateKbps}
+          allowMusicMode={channelAllowMusicMode}
+          allowStereoAudio={channelAllowStereoAudio}
+          parentPolicy={parentAudioPolicy}
+          onSave={onSaveAudioSettings}
+        />
       )}
 
       {error && (
@@ -364,6 +174,7 @@ export function ChannelSettingsModal() {
   const closeModal = useUIStore((s) => s.closeModal);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
   const channels = useSpaceStore((s) => s.channels);
+  const categories = useSpaceStore((s) => s.categories);
   const spaces = useSpaceStore((s) => s.spaces);
   const spacePermissions = useSpaceStore((s) => s.spacePermissions);
   const channelPermissions = useSpaceStore((s) => s.channelPermissions);
@@ -453,17 +264,16 @@ export function ChannelSettingsModal() {
     }
   };
 
-  const instanceMaxAudioBitrate = instanceLimits?.maxAudioBitrateKbps ?? 512;
-  const instanceDefaultAudioBitrate = Math.min(instanceLimits?.defaultAudioBitrateKbps ?? 64, instanceMaxAudioBitrate);
-  const instanceAllowMusicMode = instanceLimits?.allowMusicMode ?? true;
-  const instanceAllowStereoAudio = instanceLimits?.allowStereoAudio ?? true;
+  const parentCategory = channel.categoryId
+    ? categories.find((c) => c.id === channel.categoryId)
+    : undefined;
+  const parentAudioPolicy = resolveAudioPolicyHierarchy({
+    instance: instanceLimits,
+    space,
+    category: parentCategory,
+  });
 
-  const handleSaveAudioSettings = async (patch: {
-    audioBitrateKbps?: number | null;
-    maxAudioBitrateKbps?: number | null;
-    allowMusicMode?: boolean | null;
-    allowStereoAudio?: boolean | null;
-  }): Promise<void> => {
+  const handleSaveAudioSettings = async (patch: VoiceAudioSettingsPatch): Promise<void> => {
     setError('');
     try {
       await useSpaceStore.getState().updateChannel(channelId, patch);
@@ -508,10 +318,7 @@ export function ChannelSettingsModal() {
                   channelMaxAudioBitrateKbps={channel.maxAudioBitrateKbps ?? null}
                   channelAllowMusicMode={channel.allowMusicMode ?? null}
                   channelAllowStereoAudio={channel.allowStereoAudio ?? null}
-                  instanceDefaultAudioBitrate={instanceDefaultAudioBitrate}
-                  instanceMaxAudioBitrate={instanceMaxAudioBitrate}
-                  instanceAllowMusicMode={instanceAllowMusicMode}
-                  instanceAllowStereoAudio={instanceAllowStereoAudio}
+                  parentAudioPolicy={parentAudioPolicy}
                   isPrivate={isPrivate}
                   isFetching={isFetching}
                   isLoading={isLoading}
@@ -550,10 +357,7 @@ export function ChannelSettingsModal() {
             channelMaxAudioBitrateKbps={channel.maxAudioBitrateKbps ?? null}
             channelAllowMusicMode={channel.allowMusicMode ?? null}
             channelAllowStereoAudio={channel.allowStereoAudio ?? null}
-            instanceDefaultAudioBitrate={instanceDefaultAudioBitrate}
-            instanceMaxAudioBitrate={instanceMaxAudioBitrate}
-            instanceAllowMusicMode={instanceAllowMusicMode}
-            instanceAllowStereoAudio={instanceAllowStereoAudio}
+            parentAudioPolicy={parentAudioPolicy}
             isPrivate={isPrivate}
             isFetching={isFetching}
             isLoading={isLoading}

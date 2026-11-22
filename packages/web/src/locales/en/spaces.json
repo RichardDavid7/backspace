@@ -71,24 +71,28 @@
       "voiceAudio": {
         "sectionTitle": "Voice Audio (Opus)",
         "autoBitrate": {
-          "label": "Use instance default bitrate",
-          "description": "Currently {{kbps}} kbps. Turn off to set a custom bitrate for this voice channel."
+          "label": "Use inherited default bitrate",
+          "description": "Currently {{kbps}} kbps (from instance). Turn off to set a custom default bitrate.",
+          "descriptionInherited": "Currently {{kbps}} kbps (inherited). Turn off to set a custom default bitrate."
         },
-        "bitrateLabel": "Channel bitrate",
+        "bitrateLabel": "Default bitrate",
         "allowMusicMode": {
           "label": "Allow Opus Music mode",
-          "description": "Allows participants in this channel to use Music mode.",
-          "disabledByInstance": "Music mode is disabled at the instance level."
+          "description": "Allows participants to use Opus Music mode.",
+          "disabledByInstance": "Music mode is disabled at the instance level.",
+          "disabledByParent": "Music mode is disabled by a higher level (instance, space, or category)."
         },
         "autoMaxBitrate": {
-          "label": "Use instance max bitrate",
-          "description": "Currently {{kbps}} kbps. Disable to set a lower maximum bitrate cap for this voice channel."
+          "label": "Use inherited max bitrate",
+          "description": "Currently {{kbps}} kbps (from instance). Disable to set a lower maximum bitrate cap.",
+          "descriptionInherited": "Currently {{kbps}} kbps (inherited). Disable to set a lower maximum bitrate cap."
         },
-        "maxBitrateLabel": "Channel max bitrate",
+        "maxBitrateLabel": "Maximum bitrate",
         "allowStereoAudio": {
           "label": "Allow Stereo audio",
-          "description": "Allow participants in this channel to transmit 2-channel stereo Opus audio.",
-          "disabledByInstance": "Stereo audio is disabled in the instance settings."
+          "description": "Allow participants to transmit 2-channel stereo Opus audio.",
+          "disabledByInstance": "Stereo audio is disabled in the instance settings.",
+          "disabledByParent": "Stereo audio is disabled by a higher level (instance, space, or category)."
         }
       }
     },
@@ -293,9 +297,14 @@
       "tabs": {
         "overview": "Overview",
         "discovery": "Discovery",
+        "audio": "Audio",
         "roles": "Roles",
         "bans": "Bans"
       }
+    },
+    "audio": {
+      "title": "Audio (Opus)",
+      "description": "Default voice bitrate, maximum cap, and Opus capabilities for this space. Categories and voice channels inherit these limits and may tighten them further."
     },
     "discardChanges": "Discard",
     "overview": {

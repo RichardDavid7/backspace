@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Space, Channel, ChannelCategory, MemberWithUser, SpaceWithChannelsAndMembers, Role, SpaceFolder, SpaceLayoutItem, DmChannel, DmMessageWithUser, User, UpdateSpaceRequest, CreateSpaceRequest, UpdateChannelRequest } from '@backspace/shared';
+import type { Space, Channel, ChannelCategory, MemberWithUser, SpaceWithChannelsAndMembers, Role, SpaceFolder, SpaceLayoutItem, DmChannel, DmMessageWithUser, User, UpdateSpaceRequest, CreateSpaceRequest, UpdateChannelRequest, UpdateCategoryRequest } from '@backspace/shared';
 import { api, BackspaceApiClient, HttpError } from '../api/client';
 import { JoinRequestRequiredError } from '../utils/joinErrors';
 import { resolveAssetUrl, normalizeUserAssets } from '../utils/assetUrls';
@@ -464,7 +464,7 @@ interface SpaceState {
   deleteChannel: (channelId: string) => Promise<void>;
   createCategory: (spaceId: string, name: string) => Promise<ChannelCategory>;
   /** Updates a category on its space's instance and applies the stored row. */
-  updateCategory: (categoryId: string, data: { name?: string; position?: number }) => Promise<ChannelCategory>;
+  updateCategory: (categoryId: string, data: UpdateCategoryRequest) => Promise<ChannelCategory>;
   deleteCategory: (categoryId: string) => Promise<void>;
   updateChannelLayout: (spaceId: string, data: { channels: Array<{ id: string; position: number; categoryId: string | null }>; categories: Array<{ id: string; position: number }> }) => Promise<void>;
   addSpace: (space: Space) => void;
@@ -1045,7 +1045,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     return category;
   },
 
-  updateCategory: async (categoryId: string, data: { name?: string; position?: number }) => {
+  updateCategory: async (categoryId: string, data: UpdateCategoryRequest) => {
     const known = get().categories.find(c => c.id === categoryId);
     const space = known ? get().spaces.find(s => s.id === known.spaceId) : undefined;
     const origin = space?._instanceOrigin ?? get().categoryOriginMap.get(categoryId) ?? '';

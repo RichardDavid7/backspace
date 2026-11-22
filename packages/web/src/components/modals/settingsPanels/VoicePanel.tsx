@@ -5,10 +5,11 @@ import {
   MAX_AUDIO_BITRATE_KBPS,
   type AudioMode,
 } from '../../../stores/voiceStore';
-import { useSettingsStore } from '../../../stores/settingsStore';
-import { useSpaceStore } from '../../../stores/spaceStore';
+import { useSettingsStore, selectStreamingLimits } from '../../../stores/settingsStore';
+import { getChannelOrigin, useSpaceStore } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useFormatters } from '../../../i18n/formatters';
+import { resolveAudioPolicyHierarchy } from '../../../utils/audioPolicy';
 import { Toggle } from '../../ui/Toggle';
 import { VideoSection } from './VideoSection';
 import { AudioInputSection } from './AudioInputSection';
@@ -41,20 +42,29 @@ export function VoicePanel() {
   const currentVoiceChannel = useSpaceStore((s) =>
     currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined,
   );
-  const streamingLimits = useSettingsStore((s) => s.streamingLimits);
+  const currentVoiceCategory = useSpaceStore((s) =>
+    currentVoiceChannel?.categoryId
+      ? s.categories.find((cat) => cat.id === currentVoiceChannel.categoryId)
+      : undefined,
+  );
+  const currentVoiceSpace = useSpaceStore((s) =>
+    currentVoiceChannel?.spaceId
+      ? s.spaces.find((sp) => sp.id === currentVoiceChannel.spaceId)
+      : undefined,
+  );
+  const voiceOrigin = currentVoiceChannelId ? getChannelOrigin(currentVoiceChannelId) : '';
+  const streamingLimits = useSettingsStore((s) => selectStreamingLimits(s, voiceOrigin) ?? s.streamingLimits);
 
-  const instanceMaxBitrate = streamingLimits?.maxAudioBitrateKbps ?? MAX_AUDIO_BITRATE_KBPS;
-  const effectiveMaxBitrate = currentVoiceChannel?.maxAudioBitrateKbps != null
-    ? Math.min(currentVoiceChannel.maxAudioBitrateKbps, instanceMaxBitrate)
-    : instanceMaxBitrate;
-  const instanceDefaultBitrate = Math.min(streamingLimits?.defaultAudioBitrateKbps ?? 64, effectiveMaxBitrate);
-  const instanceAllowMusic = streamingLimits?.allowMusicMode ?? true;
-  const instanceAllowStereo = streamingLimits?.allowStereoAudio ?? true;
-  const musicAllowed = instanceAllowMusic && (currentVoiceChannel?.allowMusicMode ?? true);
-  const stereoAllowed = instanceAllowStereo && (currentVoiceChannel?.allowStereoAudio ?? true);
-  const effectiveAutoBitrate = currentVoiceChannel?.audioBitrateKbps != null
-    ? Math.min(currentVoiceChannel.audioBitrateKbps, effectiveMaxBitrate)
-    : instanceDefaultBitrate;
+  const effectivePolicy = resolveAudioPolicyHierarchy({
+    instance: streamingLimits,
+    space: currentVoiceSpace,
+    category: currentVoiceCategory,
+    channel: currentVoiceChannel,
+  });
+  const effectiveMaxBitrate = Math.min(effectivePolicy.maxBitrateKbps, MAX_AUDIO_BITRATE_KBPS);
+  const musicAllowed = effectivePolicy.allowMusicMode;
+  const stereoAllowed = effectivePolicy.allowStereoAudio;
+  const effectiveAutoBitrate = effectivePolicy.defaultBitrateKbps;
   const displayedBitrate = audioBitrateAuto
     ? effectiveAutoBitrate
     : Math.min(audioBitrate, effectiveMaxBitrate);

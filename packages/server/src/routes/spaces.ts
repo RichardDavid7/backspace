@@ -49,6 +49,10 @@ function rowToSpace(row: typeof schema.spaces.$inferSelect): Space {
     visibility: (row.visibility ?? 'private') as Space['visibility'],
     directoryListed: row.directoryListed === 1,
     description: row.description ?? null,
+    audioBitrateKbps: row.audioBitrateKbps ?? null,
+    maxAudioBitrateKbps: row.maxAudioBitrateKbps ?? null,
+    allowMusicMode: row.allowMusicMode === null || row.allowMusicMode === undefined ? null : row.allowMusicMode === 1,
+    allowStereoAudio: row.allowStereoAudio === null || row.allowStereoAudio === undefined ? null : row.allowStereoAudio === 1,
     createdAt: row.createdAt,
   };
 }
@@ -69,7 +73,9 @@ function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
     position: row.position ?? 0,
     categoryId: row.categoryId ?? null,
     audioBitrateKbps: row.audioBitrateKbps ?? null,
+    maxAudioBitrateKbps: row.maxAudioBitrateKbps ?? null,
     allowMusicMode: row.allowMusicMode === null || row.allowMusicMode === undefined ? null : row.allowMusicMode === 1,
+    allowStereoAudio: row.allowStereoAudio === null || row.allowStereoAudio === undefined ? null : row.allowStereoAudio === 1,
     createdAt: row.createdAt,
   };
 }
@@ -474,6 +480,10 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       name: c.name,
       position: c.position ?? 0,
       isPrivate: privateCategoryIds.has(c.id),
+      audioBitrateKbps: c.audioBitrateKbps ?? null,
+      maxAudioBitrateKbps: c.maxAudioBitrateKbps ?? null,
+      allowMusicMode: c.allowMusicMode === null || c.allowMusicMode === undefined ? null : c.allowMusicMode === 1,
+      allowStereoAudio: c.allowStereoAudio === null || c.allowStereoAudio === undefined ? null : c.allowStereoAudio === 1,
       createdAt: c.createdAt,
     }));
 
@@ -520,7 +530,20 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle } = request.body;
+    const {
+      name,
+      icon,
+      banner,
+      avatarColor,
+      visibility,
+      description,
+      directoryListed,
+      ownerTitle,
+      audioBitrateKbps,
+      maxAudioBitrateKbps,
+      allowMusicMode,
+      allowStereoAudio,
+    } = request.body;
     const db = getDb();
 
     const server = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
@@ -605,6 +628,69 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     }
     if (resultingVisibility === 'private' && server.directoryListed === 1) {
       updates.directoryListed = 0;
+    }
+
+    if (audioBitrateKbps !== undefined) {
+      if (audioBitrateKbps === null) {
+        updates.audioBitrateKbps = null;
+      } else {
+        if (typeof audioBitrateKbps !== 'number' || !Number.isFinite(audioBitrateKbps) || audioBitrateKbps < 8 || audioBitrateKbps > 512) {
+          return sendError(reply, 400, 'validation_failed');
+        }
+        const inst = db.select({ maxAudioBitrateKbps: schema.instanceSettings.maxAudioBitrateKbps })
+          .from(schema.instanceSettings)
+          .where(eq(schema.instanceSettings.id, 1))
+          .get();
+        const cap = inst?.maxAudioBitrateKbps ?? 512;
+        updates.audioBitrateKbps = Math.min(Math.round(audioBitrateKbps), cap);
+      }
+    }
+
+    if (maxAudioBitrateKbps !== undefined) {
+      if (maxAudioBitrateKbps === null) {
+        updates.maxAudioBitrateKbps = null;
+      } else {
+        if (typeof maxAudioBitrateKbps !== 'number' || !Number.isFinite(maxAudioBitrateKbps) || maxAudioBitrateKbps < 8 || maxAudioBitrateKbps > 512) {
+          return sendError(reply, 400, 'validation_failed');
+        }
+        const inst = db.select({ maxAudioBitrateKbps: schema.instanceSettings.maxAudioBitrateKbps })
+          .from(schema.instanceSettings)
+          .where(eq(schema.instanceSettings.id, 1))
+          .get();
+        const cap = inst?.maxAudioBitrateKbps ?? 512;
+        updates.maxAudioBitrateKbps = Math.min(Math.round(maxAudioBitrateKbps), cap);
+      }
+    }
+
+    if (allowMusicMode !== undefined) {
+      if (allowMusicMode === null) {
+        updates.allowMusicMode = null;
+      } else if (typeof allowMusicMode === 'boolean') {
+        updates.allowMusicMode = allowMusicMode ? 1 : 0;
+      } else {
+        return sendError(reply, 400, 'field_not_boolean', { field: 'allowMusicMode' });
+      }
+    }
+
+    if (allowStereoAudio !== undefined) {
+      if (allowStereoAudio === null) {
+        updates.allowStereoAudio = null;
+      } else if (typeof allowStereoAudio === 'boolean') {
+        updates.allowStereoAudio = allowStereoAudio ? 1 : 0;
+      } else {
+        return sendError(reply, 400, 'field_not_boolean', { field: 'allowStereoAudio' });
+      }
+    }
+
+    // Keep space default bitrate <= space max bitrate when both are set
+    const effectiveSpaceMax = (updates.maxAudioBitrateKbps !== undefined
+      ? updates.maxAudioBitrateKbps
+      : server.maxAudioBitrateKbps) as number | null;
+    const effectiveSpaceDefault = (updates.audioBitrateKbps !== undefined
+      ? updates.audioBitrateKbps
+      : server.audioBitrateKbps) as number | null;
+    if (effectiveSpaceMax !== null && effectiveSpaceDefault !== null && effectiveSpaceDefault > effectiveSpaceMax) {
+      updates.audioBitrateKbps = effectiveSpaceMax;
     }
 
     if (Object.keys(updates).length === 0) {

@@ -348,6 +348,25 @@
     "disabledByInstance": "实例管理员已禁用空间的自定义音效。",
     "previewHint": "右键点击或长按音效即可本地试听",
     "renameFolder": "重命名文件夹",
-    "folderRenamed": "文件夹已重命名"
+    "folderRenamed": "文件夹已重命名",
+    "disabledInSpace": "此空间已禁用音效板。",
+    "spaceOverridesTitle": "空间覆盖设置",
+    "spaceOverridesDesc": "自定义此空间的音效板行为，不影响其他空间。",
+    "spaceEnabledLabel": "在此空间启用音效板",
+    "spaceEnabledDesc": "允许成员在此空间的语音频道中查看和播放音效。",
+    "allowInstanceSoundsLabel": "显示实例默认音效",
+    "allowInstanceSoundsDesc": "将全局实例音效与此空间的自定义音效一起显示。",
+    "spaceMaxConcurrentLabel": "最大同时播放数",
+    "spaceMaxConcurrentDesc": "限制此空间内可同时播放的音效数量。",
+    "inheritInstanceLimit": "继承实例设置 ({{max}})",
+    "instanceOverridesTitle": "实例默认音效（空间覆盖）",
+    "instanceOverridesDesc": "仅在此空间内隐藏特定实例音效或调整其音量。",
+    "instanceSoundsHiddenBySpace": "当前所有实例音效均已被上方的空间设置隐藏。",
+    "hiddenBadge": "已隐藏",
+    "hiddenCount": "已隐藏：{{value}}",
+    "hideInSpace": "在此空间中隐藏",
+    "showInSpace": "在此空间中显示",
+    "overrideVolume": "空间音量",
+    "resetOverride": "重置"
   }
 }

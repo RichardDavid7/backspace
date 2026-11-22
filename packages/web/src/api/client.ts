@@ -21,6 +21,7 @@ import type {
   UpdateSpaceRequest,
   CreateChannelRequest,
   UpdateChannelRequest,
+  UpdateCategoryRequest,
   CreateMessageRequest,
   UpdateMessageRequest,
   UpdateUserRequest,
@@ -87,6 +88,8 @@ import type {
   SoundboardScopeType,
   SoundboardSound,
   SoundboardListResponse,
+  SpaceSoundboardSettings,
+  SpaceSoundboardSoundOverride,
 } from '@backspace/shared';
 import { MESSAGE_PAGING_AFTER, MESSAGE_PAGING_HEADER } from '@backspace/shared';
 
@@ -291,7 +294,7 @@ export class BackspaceApiClient {
 
   readonly categories: {
     create: (spaceId: string, name: string) => Promise<ChannelCategory>;
-    update: (id: string, data: { name?: string; position?: number }) => Promise<ChannelCategory>;
+    update: (id: string, data: UpdateCategoryRequest) => Promise<ChannelCategory>;
     delete: (id: string) => Promise<{ success: boolean }>;
     getOverrides: (categoryId: string) => Promise<{ categoryId: string; targetType: string; targetId: string; allow: string; deny: string; version?: string }[]>;
     putOverride: (categoryId: string, data: OverrideWriteBody) => Promise<{ success: boolean; version?: string }>;
@@ -451,11 +454,20 @@ export class BackspaceApiClient {
   };
 
   readonly soundboard: {
-    list: (params?: { spaceId?: string }) => Promise<SoundboardListResponse>;
+    list: (params?: { spaceId?: string; includeHidden?: boolean }) => Promise<SoundboardListResponse>;
     create: (formData: FormData) => Promise<SoundboardSound>;
     update: (id: string, data: FormData | { name?: string; emoji?: string; folder?: string | null }) => Promise<SoundboardSound>;
     reorder: (scopeType: SoundboardScopeType, scopeId: string | null, orderedIds: string[]) => Promise<{ success: boolean }>;
     renameFolder: (scopeType: SoundboardScopeType, scopeId: string | null, oldName: string, newName: string) => Promise<{ sounds: SoundboardSound[] }>;
+    updateSpaceSettings: (
+      spaceId: string,
+      data: Partial<SpaceSoundboardSettings>,
+    ) => Promise<{ spaceSettings: SpaceSoundboardSettings }>;
+    updateSpaceOverride: (
+      spaceId: string,
+      soundId: string,
+      data: { hidden?: boolean; volume?: number | null },
+    ) => Promise<{ override: SpaceSoundboardSoundOverride }>;
     remove: (id: string) => Promise<{ success: boolean }>;
   };
 
@@ -596,6 +608,7 @@ export class BackspaceApiClient {
       list: (params) => {
         const qs = new URLSearchParams();
         if (params?.spaceId) qs.set('spaceId', params.spaceId);
+        if (params?.includeHidden) qs.set('includeHidden', '1');
         const suffix = qs.toString() ? `?${qs.toString()}` : '';
         return request<SoundboardListResponse>('GET', `/soundboard${suffix}`);
       },
@@ -608,6 +621,10 @@ export class BackspaceApiClient {
         request<{ success: boolean }>('PUT', '/soundboard/reorder', { scopeType, scopeId, orderedIds }),
       renameFolder: (scopeType, scopeId, oldName, newName) =>
         request<{ sounds: SoundboardSound[] }>('PUT', '/soundboard/folder', { scopeType, scopeId, oldName, newName }),
+      updateSpaceSettings: (spaceId, data) =>
+        request<{ spaceSettings: SpaceSoundboardSettings }>('PUT', '/soundboard/space-settings', { spaceId, ...data }),
+      updateSpaceOverride: (spaceId, soundId, data) =>
+        request<{ override: SpaceSoundboardSoundOverride }>('PUT', '/soundboard/space-overrides', { spaceId, soundId, ...data }),
       remove: (id) => request<{ success: boolean }>('DELETE', `/soundboard/${encodeURIComponent(id)}`),
     };
 
@@ -736,7 +753,7 @@ export class BackspaceApiClient {
     this.categories = {
       create: (spaceId: string, name: string) =>
         request<ChannelCategory>('POST', `/spaces/${spaceId}/categories`, { name }),
-      update: (id: string, data: { name?: string; position?: number }) =>
+      update: (id: string, data: UpdateCategoryRequest) =>
         request<ChannelCategory>('PATCH', `/categories/${id}`, data),
       delete: (id: string) =>
         request<{ success: boolean }>('DELETE', `/categories/${id}`),

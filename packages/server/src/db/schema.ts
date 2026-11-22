@@ -76,6 +76,10 @@ export const spaces = sqliteTable('spaces', {
   visibility: text('visibility').default('private'),
   directoryListed: integer('directory_listed').notNull().default(0),
   description: text('description'),
+  audioBitrateKbps: integer('audio_bitrate_kbps'),
+  maxAudioBitrateKbps: integer('max_audio_bitrate_kbps'),
+  allowMusicMode: integer('allow_music_mode'),
+  allowStereoAudio: integer('allow_stereo_audio'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -94,6 +98,10 @@ export const channelCategories = sqliteTable('channel_categories', {
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   position: integer('position').default(0),
+  audioBitrateKbps: integer('audio_bitrate_kbps'),
+  maxAudioBitrateKbps: integer('max_audio_bitrate_kbps'),
+  allowMusicMode: integer('allow_music_mode'),
+  allowStereoAudio: integer('allow_stereo_audio'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_channel_categories_space_id').on(table.spaceId),
@@ -834,4 +842,21 @@ export const soundboardSounds = sqliteTable('soundboard_sounds', {
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   scopeIdx: index('idx_soundboard_scope').on(table.scopeType, table.scopeId, table.position),
+}));
+
+export const spaceSoundboardSettings = sqliteTable('space_soundboard_settings', {
+  spaceId: text('space_id').primaryKey().references(() => spaces.id, { onDelete: 'cascade' }),
+  soundboardEnabled: integer('soundboard_enabled').notNull().default(1),
+  allowInstanceSounds: integer('allow_instance_sounds').notNull().default(1),
+  maxConcurrentSounds: integer('max_concurrent_sounds'),
+});
+
+export const spaceSoundboardOverrides = sqliteTable('space_soundboard_overrides', {
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  soundId: text('sound_id').notNull().references(() => soundboardSounds.id, { onDelete: 'cascade' }),
+  hidden: integer('hidden').notNull().default(0),
+  volume: integer('volume'),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.spaceId, table.soundId] }),
+  spaceIdx: index('idx_space_soundboard_overrides_space').on(table.spaceId),
 }));

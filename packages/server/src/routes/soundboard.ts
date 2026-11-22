@@ -4,7 +4,12 @@ import { and, asc, eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { SoundboardScopeType, SoundboardSound } from '@backspace/shared';
+import type {
+  SoundboardScopeType,
+  SoundboardSound,
+  SpaceSoundboardSettings,
+  SpaceSoundboardSoundOverride,
+} from '@backspace/shared';
 import { getDb, schema } from '../db/index.js';
 import { config } from '../config.js';
 import { authenticate } from '../utils/auth.js';
@@ -52,8 +57,11 @@ function soundboardDir(): string {
   return path.join(config.uploadDir, 'soundboard');
 }
 
-function rowToSound(row: typeof schema.soundboardSounds.$inferSelect): SoundboardSound {
-  return {
+function rowToSound(
+  row: typeof schema.soundboardSounds.$inferSelect,
+  override?: { hidden: boolean; volume: number | null },
+): SoundboardSound {
+  const sound: SoundboardSound = {
     id: row.id,
     scopeType: row.scopeType as SoundboardScopeType,
     scopeId: row.scopeId,
@@ -66,6 +74,42 @@ function rowToSound(row: typeof schema.soundboardSounds.$inferSelect): Soundboar
     uploadedBy: row.uploadedBy,
     createdAt: row.createdAt,
   };
+  if (override) {
+    sound.hiddenInSpace = override.hidden;
+    sound.volumeOverride = override.volume;
+  }
+  return sound;
+}
+
+function getSpaceSoundboardSettings(spaceId: string): SpaceSoundboardSettings {
+  const db = getDb();
+  const row = db
+    .select()
+    .from(schema.spaceSoundboardSettings)
+    .where(eq(schema.spaceSoundboardSettings.spaceId, spaceId))
+    .get();
+  return {
+    soundboardEnabled: (row?.soundboardEnabled ?? 1) === 1,
+    allowInstanceSounds: (row?.allowInstanceSounds ?? 1) === 1,
+    maxConcurrentSounds: row?.maxConcurrentSounds ?? null,
+  };
+}
+
+function getSpaceSoundboardOverridesMap(spaceId: string): Map<string, { hidden: boolean; volume: number | null }> {
+  const db = getDb();
+  const rows = db
+    .select()
+    .from(schema.spaceSoundboardOverrides)
+    .where(eq(schema.spaceSoundboardOverrides.spaceId, spaceId))
+    .all();
+  const map = new Map<string, { hidden: boolean; volume: number | null }>();
+  for (const r of rows) {
+    map.set(r.soundId, {
+      hidden: r.hidden === 1,
+      volume: r.volume ?? null,
+    });
+  }
+  return map;
 }
 
 function isInstanceAdmin(userId: string): boolean {
@@ -118,12 +162,12 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     },
   });
 
-  // GET /api/soundboard?spaceId=...
-  app.get<{ Querystring: { spaceId?: string } }>('/api/soundboard', {
+  // GET /api/soundboard?spaceId=...&includeHidden=1
+  app.get<{ Querystring: { spaceId?: string; includeHidden?: string } }>('/api/soundboard', {
     preHandler: authenticate,
   }, async (request, reply) => {
     const db = getDb();
-    const { spaceId } = request.query;
+    const { spaceId, includeHidden: includeHiddenParam } = request.query;
 
     const instanceRows = db.select()
       .from(schema.soundboardSounds)
@@ -136,6 +180,8 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
 
     let scopedRows: (typeof schema.soundboardSounds.$inferSelect)[] = [];
     let scopeManageable = false;
+    let spaceSettings: SpaceSoundboardSettings | undefined;
+    let overridesMap: Map<string, { hidden: boolean; volume: number | null }> | null = null;
 
     if (spaceId) {
       const member = db.select({ userId: schema.spaceMembers.userId })
@@ -152,18 +198,48 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
           .orderBy(asc(schema.soundboardSounds.position), asc(schema.soundboardSounds.createdAt))
           .all();
         scopeManageable = canManageScope(request.userId, 'space', spaceId);
+        spaceSettings = getSpaceSoundboardSettings(spaceId);
+        overridesMap = getSpaceSoundboardOverridesMap(spaceId);
       }
     }
 
     const limits = getSoundboardLimits();
+    const includeHidden = includeHiddenParam === '1' && scopeManageable;
+    const effectiveEnabled = limits.soundboardEnabled && (spaceSettings ? spaceSettings.soundboardEnabled : true);
+    const effectiveMaxConcurrent = spaceSettings?.maxConcurrentSounds != null
+      ? Math.max(1, Math.min(spaceSettings.maxConcurrentSounds, limits.maxConcurrentSounds))
+      : limits.maxConcurrentSounds;
+
+    const mapWithOverride = (row: typeof schema.soundboardSounds.$inferSelect) =>
+      rowToSound(row, overridesMap ? (overridesMap.get(row.id) ?? { hidden: false, volume: null }) : undefined);
+
+    let instanceSounds: SoundboardSound[] = [];
+    let scopedSounds: SoundboardSound[] = [];
+
+    if (limits.soundboardEnabled && (effectiveEnabled || includeHidden)) {
+      const allInstance = instanceRows.map(mapWithOverride);
+      const allScoped = scopedRows.map(mapWithOverride);
+      if (includeHidden) {
+        instanceSounds = allInstance;
+        scopedSounds = allScoped;
+      } else {
+        instanceSounds = (spaceSettings && !spaceSettings.allowInstanceSounds)
+          ? []
+          : allInstance.filter((s) => !s.hiddenInSpace);
+        scopedSounds = allScoped.filter((s) => !s.hiddenInSpace);
+      }
+    }
+
     return reply.code(200).send({
-      instanceSounds: limits.soundboardEnabled ? instanceRows.map(rowToSound) : [],
-      scopedSounds: limits.soundboardEnabled ? scopedRows.map(rowToSound) : [],
+      instanceSounds,
+      scopedSounds,
       canManageInstance: isInstanceAdmin(request.userId),
       canManageScope: scopeManageable && limits.soundboardEnabled,
-      soundboardEnabled: limits.soundboardEnabled,
+      soundboardEnabled: effectiveEnabled,
       maxSoundsPerScope: limits.maxSoundsPerScope,
-      maxConcurrentSounds: limits.maxConcurrentSounds,
+      maxConcurrentSounds: effectiveMaxConcurrent,
+      instanceMaxConcurrentSounds: limits.maxConcurrentSounds,
+      ...(spaceSettings ? { spaceSettings } : {}),
     });
   });
 
@@ -395,7 +471,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       ))
       .orderBy(asc(schema.soundboardSounds.position), asc(schema.soundboardSounds.createdAt))
       .all();
-    return reply.code(200).send({ sounds: rows.map(rowToSound) });
+    return reply.code(200).send({ sounds: rows.map((row) => rowToSound(row)) });
   });
 
   // PUT /api/soundboard/folder — rename a folder within a scope
@@ -431,7 +507,166 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       ))
       .orderBy(asc(schema.soundboardSounds.position), asc(schema.soundboardSounds.createdAt))
       .all();
-    return reply.code(200).send({ sounds: rows.map(rowToSound) });
+    const overridesMap = scopeType === 'space' ? getSpaceSoundboardOverridesMap(scopeId) : null;
+    return reply.code(200).send({
+      sounds: rows.map((row) =>
+        rowToSound(row, overridesMap ? (overridesMap.get(row.id) ?? { hidden: false, volume: null }) : undefined),
+      ),
+    });
+  });
+
+  // PUT /api/soundboard/space-settings — space-level soundboard override settings
+  app.put<{
+    Body: {
+      spaceId: string;
+      soundboardEnabled?: boolean;
+      allowInstanceSounds?: boolean;
+      maxConcurrentSounds?: number | null;
+    };
+  }>('/api/soundboard/space-settings', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { spaceId, soundboardEnabled, allowInstanceSounds, maxConcurrentSounds } = request.body ?? {};
+    if (!spaceId || typeof spaceId !== 'string') {
+      return sendError(reply, 400, 'validation_failed');
+    }
+    if (!canManageScope(request.userId, 'space', spaceId)) {
+      return sendError(reply, 403, 'forbidden');
+    }
+    const { soundboardEnabled: instanceEnabled } = getSoundboardLimits();
+    if (!instanceEnabled) {
+      return sendError(reply, 403, 'forbidden');
+    }
+
+    const current = getSpaceSoundboardSettings(spaceId);
+    let nextMaxConcurrent = current.maxConcurrentSounds;
+    if (maxConcurrentSounds !== undefined) {
+      if (maxConcurrentSounds === null) {
+        nextMaxConcurrent = null;
+      } else if (typeof maxConcurrentSounds === 'number' && Number.isInteger(maxConcurrentSounds) && maxConcurrentSounds >= 1 && maxConcurrentSounds <= 10) {
+        nextMaxConcurrent = maxConcurrentSounds;
+      } else {
+        return sendError(reply, 400, 'validation_failed');
+      }
+    }
+
+    const nextSettings: SpaceSoundboardSettings = {
+      soundboardEnabled: typeof soundboardEnabled === 'boolean' ? soundboardEnabled : current.soundboardEnabled,
+      allowInstanceSounds: typeof allowInstanceSounds === 'boolean' ? allowInstanceSounds : current.allowInstanceSounds,
+      maxConcurrentSounds: nextMaxConcurrent,
+    };
+
+    const db = getDb();
+    db.insert(schema.spaceSoundboardSettings)
+      .values({
+        spaceId,
+        soundboardEnabled: nextSettings.soundboardEnabled ? 1 : 0,
+        allowInstanceSounds: nextSettings.allowInstanceSounds ? 1 : 0,
+        maxConcurrentSounds: nextSettings.maxConcurrentSounds,
+      })
+      .onConflictDoUpdate({
+        target: schema.spaceSoundboardSettings.spaceId,
+        set: {
+          soundboardEnabled: nextSettings.soundboardEnabled ? 1 : 0,
+          allowInstanceSounds: nextSettings.allowInstanceSounds ? 1 : 0,
+          maxConcurrentSounds: nextSettings.maxConcurrentSounds,
+        },
+      })
+      .run();
+
+    return reply.code(200).send({ spaceSettings: nextSettings });
+  });
+
+  // PUT /api/soundboard/space-overrides — per-sound override (hide/volume) within a space
+  app.put<{
+    Body: {
+      spaceId: string;
+      soundId: string;
+      hidden?: boolean;
+      volume?: number | null;
+    };
+  }>('/api/soundboard/space-overrides', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { spaceId, soundId, hidden, volume } = request.body ?? {};
+    if (!spaceId || typeof spaceId !== 'string' || !soundId || typeof soundId !== 'string') {
+      return sendError(reply, 400, 'validation_failed');
+    }
+    if (!canManageScope(request.userId, 'space', spaceId)) {
+      return sendError(reply, 403, 'forbidden');
+    }
+    const { soundboardEnabled: instanceEnabled } = getSoundboardLimits();
+    if (!instanceEnabled) {
+      return sendError(reply, 403, 'forbidden');
+    }
+
+    const db = getDb();
+    const sound = db
+      .select({ id: schema.soundboardSounds.id, scopeType: schema.soundboardSounds.scopeType, scopeId: schema.soundboardSounds.scopeId })
+      .from(schema.soundboardSounds)
+      .where(eq(schema.soundboardSounds.id, soundId))
+      .get();
+    if (!sound) {
+      return sendError(reply, 404, 'not_found');
+    }
+    const isEligible = sound.scopeType === 'instance' || (sound.scopeType === 'space' && sound.scopeId === spaceId);
+    if (!isEligible) {
+      return sendError(reply, 403, 'forbidden');
+    }
+
+    const existing = db
+      .select()
+      .from(schema.spaceSoundboardOverrides)
+      .where(and(
+        eq(schema.spaceSoundboardOverrides.spaceId, spaceId),
+        eq(schema.spaceSoundboardOverrides.soundId, soundId),
+      ))
+      .get();
+
+    const nextHidden = typeof hidden === 'boolean' ? hidden : (existing?.hidden === 1);
+    let nextVolume: number | null = existing?.volume ?? null;
+    if (volume !== undefined) {
+      if (volume === null) {
+        nextVolume = null;
+      } else if (typeof volume === 'number' && Number.isFinite(volume) && volume >= 0 && volume <= 100) {
+        const rounded = Math.round(volume);
+        nextVolume = rounded === 100 ? null : rounded;
+      } else {
+        return sendError(reply, 400, 'validation_failed');
+      }
+    }
+
+    if (!nextHidden && nextVolume === null) {
+      db.delete(schema.spaceSoundboardOverrides)
+        .where(and(
+          eq(schema.spaceSoundboardOverrides.spaceId, spaceId),
+          eq(schema.spaceSoundboardOverrides.soundId, soundId),
+        ))
+        .run();
+    } else {
+      db.insert(schema.spaceSoundboardOverrides)
+        .values({
+          spaceId,
+          soundId,
+          hidden: nextHidden ? 1 : 0,
+          volume: nextVolume,
+        })
+        .onConflictDoUpdate({
+          target: [schema.spaceSoundboardOverrides.spaceId, schema.spaceSoundboardOverrides.soundId],
+          set: {
+            hidden: nextHidden ? 1 : 0,
+            volume: nextVolume,
+          },
+        })
+        .run();
+    }
+
+    const override: SpaceSoundboardSoundOverride = {
+      soundId,
+      hidden: nextHidden,
+      volume: nextVolume,
+    };
+    return reply.code(200).send({ override });
   });
 
   // DELETE /api/soundboard/:id

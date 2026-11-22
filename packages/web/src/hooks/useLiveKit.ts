@@ -29,6 +29,7 @@ import { consumeIntentionalCameraOff, markIntentionalCameraOff } from '../utils/
 import { dmCallChannelId, dmCallOrigin, dmCallRoomKey, voiceSessionOrigin } from '../utils/dmCall';
 import { AudioManager } from '../audio/AudioManager';
 import { SpeakingDetector } from '../audio/SpeakingDetector';
+import { resolveAudioPolicyHierarchy } from '../utils/audioPolicy';
 import {
   CAMERA_OVERDRIVE,
   buildScreenShareOptions,
@@ -272,6 +273,14 @@ export interface EffectiveAudioInputs {
   audioStereo: boolean;
   audioBitrateAuto: boolean;
   audioBitrate: number;
+  spaceAudioBitrateKbps?: number | null;
+  spaceMaxAudioBitrateKbps?: number | null;
+  spaceAllowMusicMode?: boolean | null;
+  spaceAllowStereoAudio?: boolean | null;
+  categoryAudioBitrateKbps?: number | null;
+  categoryMaxAudioBitrateKbps?: number | null;
+  categoryAllowMusicMode?: boolean | null;
+  categoryAllowStereoAudio?: boolean | null;
   channelAudioBitrateKbps?: number | null;
   channelMaxAudioBitrateKbps?: number | null;
   channelAllowMusicMode?: boolean | null;
@@ -283,30 +292,49 @@ export interface EffectiveAudioInputs {
 }
 
 /**
- * Resolves the effective Opus encoding settings for the current voice room:
- * - Automatic bitrate follows the channel's configured bitrate, or the
- *   instance's default bitrate when the channel has no override.
- * - Manual bitrate is capped at `min(instanceMax, channelMax)`.
- * - Music mode and Stereo are permitted only when both instance and channel allow them.
+ * Resolves the effective Opus encoding settings for the current voice room
+ * across the full hierarchy:
+ *   Instance → Space → Category (Subcategory) → Channel → User
+ *
+ * - Automatic bitrate follows the most specific configured default
+ *   (Channel > Category > Space > Instance), clamped to the effective cap.
+ * - Manual bitrate is capped at `min(instanceMax, spaceMax, categoryMax, channelMax)`.
+ * - Music mode and Stereo are permitted only when every level in the hierarchy allows them.
  */
 export function resolveEffectiveAudioConfig(input: EffectiveAudioInputs): AudioPublishConfig {
-  const instanceMax = Math.max(8, Math.min(512, input.instanceMaxAudioBitrateKbps ?? 512));
-  const effectiveMax = input.channelMaxAudioBitrateKbps != null
-    ? Math.max(8, Math.min(instanceMax, input.channelMaxAudioBitrateKbps))
-    : instanceMax;
-  const instanceDefault = Math.max(8, Math.min(effectiveMax, input.instanceDefaultAudioBitrateKbps ?? 64));
-  const channelTarget = input.channelAudioBitrateKbps != null
-    ? Math.max(8, Math.min(effectiveMax, input.channelAudioBitrateKbps))
-    : instanceDefault;
+  const policy = resolveAudioPolicyHierarchy({
+    instance: {
+      defaultAudioBitrateKbps: input.instanceDefaultAudioBitrateKbps,
+      maxAudioBitrateKbps: input.instanceMaxAudioBitrateKbps,
+      allowMusicMode: input.instanceAllowMusicMode,
+      allowStereoAudio: input.instanceAllowStereoAudio,
+    },
+    space: {
+      audioBitrateKbps: input.spaceAudioBitrateKbps,
+      maxAudioBitrateKbps: input.spaceMaxAudioBitrateKbps,
+      allowMusicMode: input.spaceAllowMusicMode,
+      allowStereoAudio: input.spaceAllowStereoAudio,
+    },
+    category: {
+      audioBitrateKbps: input.categoryAudioBitrateKbps,
+      maxAudioBitrateKbps: input.categoryMaxAudioBitrateKbps,
+      allowMusicMode: input.categoryAllowMusicMode,
+      allowStereoAudio: input.categoryAllowStereoAudio,
+    },
+    channel: {
+      audioBitrateKbps: input.channelAudioBitrateKbps,
+      maxAudioBitrateKbps: input.channelMaxAudioBitrateKbps,
+      allowMusicMode: input.channelAllowMusicMode,
+      allowStereoAudio: input.channelAllowStereoAudio,
+    },
+  });
 
   const effectiveBitrate = input.audioBitrateAuto
-    ? channelTarget
-    : Math.max(8, Math.min(effectiveMax, input.audioBitrate));
+    ? policy.defaultBitrateKbps
+    : Math.max(8, Math.min(policy.maxBitrateKbps, input.audioBitrate));
 
-  const musicAllowed = (input.instanceAllowMusicMode ?? true) && (input.channelAllowMusicMode ?? true);
-  const effectiveMode: AudioMode = input.audioMode === 'music' && musicAllowed ? 'music' : 'voice';
-  const stereoAllowed = (input.instanceAllowStereoAudio ?? true) && (input.channelAllowStereoAudio ?? true);
-  const effectiveStereo = input.audioStereo && stereoAllowed;
+  const effectiveMode: AudioMode = input.audioMode === 'music' && policy.allowMusicMode ? 'music' : 'voice';
+  const effectiveStereo = input.audioStereo && policy.allowStereoAudio;
 
   return {
     audioMode: effectiveMode,
@@ -340,7 +368,14 @@ export function buildAudioPublishOptions(cfg: AudioPublishConfig) {
 function getEffectiveAudioConfigForCurrentRoom(): AudioPublishConfig {
   const vs = useVoiceStore.getState();
   const cvId = vs.currentVoiceChannelId;
-  const channel = cvId ? useSpaceStore.getState().channels.find((c) => c.id === cvId) : undefined;
+  const spaceState = useSpaceStore.getState();
+  const channel = cvId ? spaceState.channels?.find((c) => c.id === cvId) : undefined;
+  const category = channel?.categoryId
+    ? spaceState.categories?.find((cat) => cat.id === channel.categoryId)
+    : undefined;
+  const space = channel?.spaceId
+    ? spaceState.spaces?.find((sp) => sp.id === channel.spaceId)
+    : undefined;
   const origin = cvId ? getChannelOrigin(cvId) : '';
   const settingsState = useSettingsStore.getState();
   const limits = (origin ? settingsState.streamingLimitsByOrigin[origin] : settingsState.streamingLimits)
@@ -350,6 +385,14 @@ function getEffectiveAudioConfigForCurrentRoom(): AudioPublishConfig {
     audioStereo: vs.audioStereo,
     audioBitrateAuto: vs.audioBitrateAuto,
     audioBitrate: vs.audioBitrate,
+    spaceAudioBitrateKbps: space?.audioBitrateKbps ?? null,
+    spaceMaxAudioBitrateKbps: space?.maxAudioBitrateKbps ?? null,
+    spaceAllowMusicMode: space?.allowMusicMode ?? null,
+    spaceAllowStereoAudio: space?.allowStereoAudio ?? null,
+    categoryAudioBitrateKbps: category?.audioBitrateKbps ?? null,
+    categoryMaxAudioBitrateKbps: category?.maxAudioBitrateKbps ?? null,
+    categoryAllowMusicMode: category?.allowMusicMode ?? null,
+    categoryAllowStereoAudio: category?.allowStereoAudio ?? null,
     channelAudioBitrateKbps: channel?.audioBitrateKbps ?? null,
     channelMaxAudioBitrateKbps: channel?.maxAudioBitrateKbps ?? null,
     channelAllowMusicMode: channel?.allowMusicMode ?? null,
@@ -461,13 +504,29 @@ export function useLiveKit() {
   });
   useEffect(() => {
     const syncChannelAudio = () => {
+      const spaceState = useSpaceStore.getState();
       const ch = currentVoiceChannelId
-        ? useSpaceStore.getState().channels?.find((c) => c.id === currentVoiceChannelId)
+        ? spaceState.channels?.find((c) => c.id === currentVoiceChannelId)
         : undefined;
-      const nextBitrate = ch?.audioBitrateKbps ?? null;
-      const nextMaxBitrate = ch?.maxAudioBitrateKbps ?? null;
-      const nextAllowMusic = ch?.allowMusicMode ?? null;
-      const nextAllowStereo = ch?.allowStereoAudio ?? null;
+      const cat = ch?.categoryId
+        ? spaceState.categories?.find((c) => c.id === ch.categoryId)
+        : undefined;
+      const sp = ch?.spaceId
+        ? spaceState.spaces?.find((s) => s.id === ch.spaceId)
+        : undefined;
+      // Resolve space → category → channel (independent of instance limits,
+      // which are tracked separately via `streamHostLimits`).
+      const resolved = resolveAudioPolicyHierarchy({
+        space: sp,
+        category: cat,
+        channel: ch,
+      });
+      const hasAnyDefault = ch?.audioBitrateKbps != null || cat?.audioBitrateKbps != null || sp?.audioBitrateKbps != null;
+      const hasAnyMax = ch?.maxAudioBitrateKbps != null || cat?.maxAudioBitrateKbps != null || sp?.maxAudioBitrateKbps != null;
+      const nextBitrate = hasAnyDefault ? resolved.defaultBitrateKbps : null;
+      const nextMaxBitrate = hasAnyMax ? resolved.maxBitrateKbps : null;
+      const nextAllowMusic = resolved.allowMusicMode ? null : false;
+      const nextAllowStereo = resolved.allowStereoAudio ? null : false;
       setActiveChannelAudio((prev) => (
         prev.bitrate === nextBitrate
         && prev.maxBitrate === nextMaxBitrate
@@ -673,8 +732,9 @@ export function useLiveKit() {
         }
         vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
         const resolvedUrl = origin ? `${origin}${sb.fileUrl}` : sb.fileUrl;
+        const clipScale = sb.volumeScale ?? 1;
         void AudioManager.getInstance()
-          .playSoundUrl(resolvedUrl, { volume: (vs.soundboardVolume / 100) * 0.8 })
+          .playSoundUrl(resolvedUrl, { volume: (vs.soundboardVolume / 100) * 0.8 * clipScale })
           .then((res) => {
             if (!res) {
               useVoiceStore.getState().finishSoundboardClip(sb.soundId);

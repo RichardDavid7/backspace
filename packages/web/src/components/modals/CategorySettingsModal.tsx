@@ -4,13 +4,16 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
+import { useSettingsStore, selectStreamingLimits } from '../../stores/settingsStore';
 import { PermissionBits, hasPermissionBit, isHiddenFromEveryone } from '../../utils/permissions';
+import { resolveAudioPolicyHierarchy, type ResolvedAudioPolicy } from '../../utils/audioPolicy';
 import { InlineNameEditor } from '../ui/InlineNameEditor';
 import { PermissionsEditor } from '../ui/PermissionsEditor';
 import type { PermissionDef } from '../ui/OverrideEntry';
 import { describeError } from '../../i18n/errors';
 import { useEntityOverrides } from '../../hooks/useEntityOverrides';
 import { PrivacySetting } from './PrivacySetting';
+import { VoiceAudioSettingsCard, type VoiceAudioSettingsPatch } from './VoiceAudioSettingsCard';
 import { CATEGORY_NAME_MAX_LENGTH, normalizeCategoryName } from '@backspace/shared/src/constants';
 
 // ─── Permission Definitions for Category Overrides ──────────────────────────────
@@ -36,8 +39,12 @@ const CATEGORY_PERMISSIONS: PermissionDef[] = [
 // ─── Overview Tab ───────────────────────────────────────────────────────────────
 
 function OverviewTab({
-  categoryId,
   categoryName,
+  categoryAudioBitrateKbps,
+  categoryMaxAudioBitrateKbps,
+  categoryAllowMusicMode,
+  categoryAllowStereoAudio,
+  parentAudioPolicy,
   isPrivate,
   isFetching,
   isLoading,
@@ -47,9 +54,14 @@ function OverviewTab({
   onTogglePrivate,
   onDeleteCategory,
   onRename,
+  onSaveAudioSettings,
 }: {
-  categoryId: string;
   categoryName: string;
+  categoryAudioBitrateKbps: number | null;
+  categoryMaxAudioBitrateKbps: number | null;
+  categoryAllowMusicMode: boolean | null;
+  categoryAllowStereoAudio: boolean | null;
+  parentAudioPolicy: ResolvedAudioPolicy;
   isPrivate: boolean;
   isFetching: boolean;
   isLoading: boolean;
@@ -59,6 +71,7 @@ function OverviewTab({
   onTogglePrivate: () => void;
   onDeleteCategory: () => void;
   onRename: (name: string) => Promise<void>;
+  onSaveAudioSettings: (patch: VoiceAudioSettingsPatch) => Promise<void>;
 }) {
   const { t } = useTranslation(['spaces', 'common']);
   return (
@@ -82,6 +95,18 @@ function OverviewTab({
           onSave={onRename}
         />
       </div>
+
+      {canManageChannels && (
+        <VoiceAudioSettingsCard
+          scope="category"
+          audioBitrateKbps={categoryAudioBitrateKbps}
+          maxAudioBitrateKbps={categoryMaxAudioBitrateKbps}
+          allowMusicMode={categoryAllowMusicMode}
+          allowStereoAudio={categoryAllowStereoAudio}
+          parentPolicy={parentAudioPolicy}
+          onSave={onSaveAudioSettings}
+        />
+      )}
 
       {error && (
         <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
@@ -128,6 +153,8 @@ export function CategorySettingsModal() {
   const categories = useSpaceStore((s) => s.categories);
   const spaces = useSpaceStore((s) => s.spaces);
   const spacePermissions = useSpaceStore((s) => s.spacePermissions);
+  const spaceOriginForLimits = spaces.find((s) => s.id === currentSpaceId)?._instanceOrigin ?? '';
+  const instanceLimits = useSettingsStore((s) => selectStreamingLimits(s, spaceOriginForLimits) ?? s.streamingLimits);
 
   const [tab, setTab] = useState<'overview' | 'permissions'>('overview');
   const [isLoading, setIsLoading] = useState(false);
@@ -174,6 +201,20 @@ export function CategorySettingsModal() {
       setError(describeError(err));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const parentAudioPolicy = resolveAudioPolicyHierarchy({
+    instance: instanceLimits,
+    space,
+  });
+
+  const handleSaveAudioSettings = async (patch: VoiceAudioSettingsPatch): Promise<void> => {
+    setError('');
+    try {
+      await useSpaceStore.getState().updateCategory(categoryId, patch);
+    } catch (err) {
+      setError(describeError(err));
     }
   };
 
@@ -227,8 +268,12 @@ export function CategorySettingsModal() {
             <div className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
               {tab === 'overview' && (
                 <OverviewTab
-                  categoryId={categoryId}
                   categoryName={category.name}
+                  categoryAudioBitrateKbps={category.audioBitrateKbps ?? null}
+                  categoryMaxAudioBitrateKbps={category.maxAudioBitrateKbps ?? null}
+                  categoryAllowMusicMode={category.allowMusicMode ?? null}
+                  categoryAllowStereoAudio={category.allowStereoAudio ?? null}
+                  parentAudioPolicy={parentAudioPolicy}
                   isPrivate={isPrivate}
                   isFetching={isFetching}
                   isLoading={isLoading}
@@ -238,6 +283,7 @@ export function CategorySettingsModal() {
                   onTogglePrivate={handleToggle}
                   onDeleteCategory={() => setShowDeleteConfirm(true)}
                   onRename={handleRename}
+                  onSaveAudioSettings={handleSaveAudioSettings}
                 />
               )}
               {tab === 'permissions' && (
@@ -257,8 +303,12 @@ export function CategorySettingsModal() {
           </div>
         ) : (
           <OverviewTab
-            categoryId={categoryId}
             categoryName={category.name}
+            categoryAudioBitrateKbps={category.audioBitrateKbps ?? null}
+            categoryMaxAudioBitrateKbps={category.maxAudioBitrateKbps ?? null}
+            categoryAllowMusicMode={category.allowMusicMode ?? null}
+            categoryAllowStereoAudio={category.allowStereoAudio ?? null}
+            parentAudioPolicy={parentAudioPolicy}
             isPrivate={isPrivate}
             isFetching={isFetching}
             isLoading={isLoading}
@@ -268,6 +318,7 @@ export function CategorySettingsModal() {
             onTogglePrivate={handleToggle}
             onDeleteCategory={() => setShowDeleteConfirm(true)}
             onRename={handleRename}
+            onSaveAudioSettings={handleSaveAudioSettings}
           />
         )}
       </Modal>

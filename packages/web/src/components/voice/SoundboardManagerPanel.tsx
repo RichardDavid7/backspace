@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SoundboardScopeType, SoundboardSound } from '@backspace/shared';
+import type { SoundboardScopeType, SoundboardSound, SpaceSoundboardSettings } from '@backspace/shared';
 import { getApiForOrigin } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { AudioManager } from '../../audio/AudioManager';
+import { Toggle } from '../ui/Toggle';
 import { SoundboardEditorModal } from './SoundboardEditorModal';
 
 interface SoundboardManagerPanelProps {
@@ -42,6 +43,13 @@ export function SoundboardManagerPanel({
   const addToast = useUIStore((s) => s.addToast);
 
   const [sounds, setSounds] = useState<SoundboardSound[]>([]);
+  const [instanceSounds, setInstanceSounds] = useState<SoundboardSound[]>([]);
+  const [spaceSettings, setSpaceSettings] = useState<SpaceSoundboardSettings | null>(null);
+  const [instanceMaxConcurrent, setInstanceMaxConcurrent] = useState(3);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [savingOverrideId, setSavingOverrideId] = useState<string | null>(null);
+  const [editingVolumeId, setEditingVolumeId] = useState<string | null>(null);
+  const [volumeDraft, setVolumeDraft] = useState<number>(100);
   const [canManage, setCanManage] = useState(false);
   const [maxSoundsPerScope, setMaxSoundsPerScope] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,13 +66,25 @@ export function SoundboardManagerPanel({
       const client = getApiForOrigin(origin);
       const data = await client.soundboard.list({
         spaceId: scopeType === 'space' && scopeId ? scopeId : undefined,
+        includeHidden: scopeType === 'space' && Boolean(scopeId),
       });
       if (scopeType === 'instance') {
         setSounds(data.instanceSounds);
+        setInstanceSounds([]);
+        setSpaceSettings(null);
         setCanManage(data.canManageInstance);
         setMaxSoundsPerScope(null);
       } else {
         setSounds(data.scopedSounds);
+        setInstanceSounds(data.instanceSounds);
+        setSpaceSettings(
+          data.spaceSettings ?? {
+            soundboardEnabled: true,
+            allowInstanceSounds: true,
+            maxConcurrentSounds: null,
+          },
+        );
+        setInstanceMaxConcurrent(data.instanceMaxConcurrentSounds ?? data.maxConcurrentSounds ?? 3);
         setCanManage(data.canManageScope);
         setMaxSoundsPerScope(data.maxSoundsPerScope ?? 32);
       }
@@ -128,14 +148,103 @@ export function SoundboardManagerPanel({
     }
   };
 
+  const handleUpdateSpaceSettings = async (patch: Partial<SpaceSoundboardSettings>) => {
+    if (scopeType !== 'space' || !scopeId || !spaceSettings || savingSettings) return;
+    const prev = spaceSettings;
+    const optimistic = { ...spaceSettings, ...patch };
+    setSpaceSettings(optimistic);
+    setSavingSettings(true);
+    try {
+      const client = getApiForOrigin(origin);
+      const res = await client.soundboard.updateSpaceSettings(scopeId, patch);
+      setSpaceSettings(res.spaceSettings);
+    } catch {
+      setSpaceSettings(prev);
+      addToast(t('soundboard.saveFailed'), 'warning');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const applySoundOverrideLocally = (
+    soundId: string,
+    patch: { hiddenInSpace: boolean; volumeOverride: number | null },
+  ) => {
+    setSounds((prev) =>
+      prev.map((s) => (s.id === soundId ? { ...s, ...patch } : s)),
+    );
+    setInstanceSounds((prev) =>
+      prev.map((s) => (s.id === soundId ? { ...s, ...patch } : s)),
+    );
+  };
+
+  const handleToggleHidden = async (sound: SoundboardSound) => {
+    if (scopeType !== 'space' || !scopeId || savingOverrideId === sound.id) return;
+    const nextHidden = !sound.hiddenInSpace;
+    const prevPatch = {
+      hiddenInSpace: Boolean(sound.hiddenInSpace),
+      volumeOverride: sound.volumeOverride ?? null,
+    };
+    applySoundOverrideLocally(sound.id, {
+      hiddenInSpace: nextHidden,
+      volumeOverride: sound.volumeOverride ?? null,
+    });
+    setSavingOverrideId(sound.id);
+    try {
+      const client = getApiForOrigin(origin);
+      const res = await client.soundboard.updateSpaceOverride(scopeId, sound.id, {
+        hidden: nextHidden,
+      });
+      applySoundOverrideLocally(sound.id, {
+        hiddenInSpace: res.override.hidden,
+        volumeOverride: res.override.volume,
+      });
+    } catch {
+      applySoundOverrideLocally(sound.id, prevPatch);
+      addToast(t('soundboard.saveFailed'), 'warning');
+    } finally {
+      setSavingOverrideId(null);
+    }
+  };
+
+  const handleSaveVolumeOverride = async (sound: SoundboardSound, volume: number | null) => {
+    if (scopeType !== 'space' || !scopeId || savingOverrideId === sound.id) return;
+    const normalized = volume === null || volume >= 100 ? null : Math.max(0, Math.min(100, Math.round(volume)));
+    const prevPatch = {
+      hiddenInSpace: Boolean(sound.hiddenInSpace),
+      volumeOverride: sound.volumeOverride ?? null,
+    };
+    applySoundOverrideLocally(sound.id, {
+      hiddenInSpace: Boolean(sound.hiddenInSpace),
+      volumeOverride: normalized,
+    });
+    setSavingOverrideId(sound.id);
+    try {
+      const client = getApiForOrigin(origin);
+      const res = await client.soundboard.updateSpaceOverride(scopeId, sound.id, {
+        volume: normalized,
+      });
+      applySoundOverrideLocally(sound.id, {
+        hiddenInSpace: res.override.hidden,
+        volumeOverride: res.override.volume,
+      });
+    } catch {
+      applySoundOverrideLocally(sound.id, prevPatch);
+      addToast(t('soundboard.saveFailed'), 'warning');
+    } finally {
+      setSavingOverrideId(null);
+    }
+  };
+
   const handlePreview = (sound: SoundboardSound) => {
     if (playingId === sound.id) return;
     const resolvedUrl = sound.fileUrl.startsWith('/') && origin
       ? `${origin}${sound.fileUrl}`
       : sound.fileUrl;
+    const clipScale = Math.max(0, Math.min(1, (sound.volumeOverride ?? 100) / 100));
     setPlayingId(sound.id);
     void AudioManager.getInstance()
-      .playSoundUrl(resolvedUrl, { volume: 0.8 })
+      .playSoundUrl(resolvedUrl, { volume: 0.8 * clipScale })
       .then((res) => {
         if (!res) {
           setPlayingId((curr) => (curr === sound.id ? null : curr));
@@ -209,85 +318,205 @@ export function SoundboardManagerPanel({
     folderMap.set(f, [...(folderMap.get(f) ?? []), s]);
   }
 
-  const renderRows = (items: SoundboardSound[], groupFolder: string | null) => (
+  const renderRows = (
+    items: SoundboardSound[],
+    groupFolder: string | null,
+    isInstanceOverrideList = false,
+  ) => (
     <div className="space-y-1.5">
       {items.map((sound, idx) => {
         const isPlaying = playingId === sound.id;
+        const isHidden = Boolean(sound.hiddenInSpace);
+        const hasVolumeOverride = sound.volumeOverride != null && sound.volumeOverride !== 100;
+        const isEditingVolume = editingVolumeId === sound.id;
+        const isSavingOverride = savingOverrideId === sound.id;
+        const showSpaceOverrides = scopeType === 'space' && Boolean(scopeId) && canManage;
+
         return (
-          <div
-            key={sound.id}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              handlePreview(sound);
-            }}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
-              isPlaying
-                ? 'bg-accent-primary/15 border-accent-primary/50'
-                : 'bg-surface-channel/70 border-white/[0.06] hover:border-white/10'
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => handlePreview(sound)}
-              className="w-8 h-8 rounded-md bg-surface-elevated hover:bg-interactive-hover flex items-center justify-center text-base shrink-0 transition-colors cursor-pointer"
-              title={t('soundboard.preview')}
+          <div key={sound.id} className="space-y-1.5">
+            <div
+              onContextMenu={(e) => {
+                e.preventDefault();
+                handlePreview(sound);
+              }}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
+                isPlaying
+                  ? 'bg-accent-primary/15 border-accent-primary/50'
+                  : 'bg-surface-channel/70 border-white/[0.06] hover:border-white/10'
+              } ${isHidden ? 'opacity-55' : ''}`}
             >
-              {sound.emoji}
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium text-txt-primary truncate">{sound.name}</div>
-              <div className="text-[11px] text-txt-tertiary font-mono tabular-nums">
-                {t('soundboard.seconds', { value: (sound.durationMs / 1000).toFixed(2) })}
+              <button
+                type="button"
+                onClick={() => handlePreview(sound)}
+                className="w-8 h-8 rounded-md bg-surface-elevated hover:bg-interactive-hover flex items-center justify-center text-base shrink-0 transition-colors cursor-pointer"
+                title={t('soundboard.preview')}
+              >
+                {sound.emoji}
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm font-medium text-txt-primary truncate">{sound.name}</span>
+                  {isHidden && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/[0.07] text-txt-tertiary shrink-0">
+                      {t('soundboard.hiddenBadge')}
+                    </span>
+                  )}
+                  {hasVolumeOverride && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono tabular-nums bg-accent-primary/15 text-accent-primary shrink-0">
+                      {t('soundboard.volumePercent', { value: sound.volumeOverride })}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-txt-tertiary font-mono tabular-nums">
+                  {t('soundboard.seconds', { value: (sound.durationMs / 1000).toFixed(2) })}
+                </div>
               </div>
+              {canManage && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {showSpaceOverrides && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isSavingOverride}
+                        onClick={() => {
+                          if (isEditingVolume) {
+                            setEditingVolumeId(null);
+                          } else {
+                            setVolumeDraft(sound.volumeOverride ?? 100);
+                            setEditingVolumeId(sound.id);
+                          }
+                        }}
+                        className={`p-1.5 rounded-md transition-colors disabled:opacity-40 cursor-pointer ${
+                          isEditingVolume || hasVolumeOverride
+                            ? 'text-accent-primary bg-accent-primary/15'
+                            : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover'
+                        }`}
+                        aria-label={t('soundboard.overrideVolume')}
+                        title={t('soundboard.overrideVolume')}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSavingOverride}
+                        onClick={() => void handleToggleHidden(sound)}
+                        className={`p-1.5 rounded-md transition-colors disabled:opacity-40 cursor-pointer ${
+                          isHidden
+                            ? 'text-accent-amber bg-accent-amber/15 hover:bg-accent-amber/25'
+                            : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover'
+                        }`}
+                        aria-label={isHidden ? t('soundboard.showInSpace') : t('soundboard.hideInSpace')}
+                        title={isHidden ? t('soundboard.showInSpace') : t('soundboard.hideInSpace')}
+                      >
+                        {isHidden ? (
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </>
+                  )}
+                  {!isInstanceOverrideList && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => void handleMoveInGroup(sound.id, groupFolder, -1)}
+                        className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
+                        aria-label={t('soundboard.moveUp')}
+                        title={t('soundboard.moveUp')}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === items.length - 1}
+                        onClick={() => void handleMoveInGroup(sound.id, groupFolder, 1)}
+                        className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
+                        aria-label={t('soundboard.moveDown')}
+                        title={t('soundboard.moveDown')}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M19 12l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditor({ sound, defaultFolder: sound.folder })}
+                        className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
+                        aria-label={t('soundboard.edit')}
+                        title={t('soundboard.edit')}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(sound)}
+                        className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-danger hover:bg-accent-rose/10 transition-colors cursor-pointer"
+                        aria-label={t('soundboard.delete')}
+                        title={t('soundboard.delete')}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-            {canManage && (
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  disabled={idx === 0}
-                  onClick={() => void handleMoveInGroup(sound.id, groupFolder, -1)}
-                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
-                  aria-label={t('soundboard.moveUp')}
-                  title={t('soundboard.moveUp')}
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  disabled={idx === items.length - 1}
-                  onClick={() => void handleMoveInGroup(sound.id, groupFolder, 1)}
-                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-30 transition-colors cursor-pointer"
-                  aria-label={t('soundboard.moveDown')}
-                  title={t('soundboard.moveDown')}
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M19 12l-7 7-7-7" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditor({ sound, defaultFolder: sound.folder })}
-                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
-                  aria-label={t('soundboard.edit')}
-                  title={t('soundboard.edit')}
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(sound)}
-                  className="p-1.5 rounded-md text-txt-tertiary hover:text-txt-danger hover:bg-accent-rose/10 transition-colors cursor-pointer"
-                  aria-label={t('soundboard.delete')}
-                  title={t('soundboard.delete')}
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-                  </svg>
-                </button>
+
+            {showSpaceOverrides && isEditingVolume && (
+              <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-[11px] text-txt-secondary shrink-0">
+                  {t('soundboard.overrideVolume')}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={volumeDraft}
+                  onChange={(e) => setVolumeDraft(Number(e.target.value))}
+                  onMouseUp={() => void handleSaveVolumeOverride(sound, volumeDraft)}
+                  onTouchEnd={() => void handleSaveVolumeOverride(sound, volumeDraft)}
+                  onKeyUp={() => void handleSaveVolumeOverride(sound, volumeDraft)}
+                  aria-label={t('soundboard.overrideVolume')}
+                  className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
+                    [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+                  style={{
+                    background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${volumeDraft}%, rgb(var(--interactive-muted)) ${volumeDraft}%, rgb(var(--interactive-muted)) 100%)`,
+                  }}
+                />
+                <span className="text-[11px] font-mono tabular-nums text-txt-tertiary w-9 text-right">
+                  {t('soundboard.volumePercent', { value: volumeDraft })}
+                </span>
+                {hasVolumeOverride && (
+                  <button
+                    type="button"
+                    disabled={isSavingOverride}
+                    onClick={() => {
+                      setVolumeDraft(100);
+                      void handleSaveVolumeOverride(sound, null);
+                    }}
+                    className="px-2 py-0.5 rounded text-[11px] text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
+                  >
+                    {t('soundboard.resetOverride')}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -343,6 +572,85 @@ export function SoundboardManagerPanel({
       {isLimitReached && (
         <div className="px-3 py-2 rounded-lg bg-accent-amber/10 border border-accent-amber/25 text-xs text-accent-amber">
           {maxSoundsPerScope === 0 ? t('soundboard.disabledByInstance') : t('soundboard.limitReached')}
+        </div>
+      )}
+
+      {scopeType === 'space' && scopeId && spaceSettings && (
+        <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-3.5 space-y-3">
+          <div>
+            <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">
+              {t('soundboard.spaceOverridesTitle')}
+            </div>
+            <p className="text-xs text-txt-tertiary mt-0.5">
+              {t('soundboard.spaceOverridesDesc')}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-txt-primary">
+                {t('soundboard.spaceEnabledLabel')}
+              </div>
+              <div className="text-xs text-txt-tertiary">
+                {t('soundboard.spaceEnabledDesc')}
+              </div>
+            </div>
+            <Toggle
+              enabled={spaceSettings.soundboardEnabled}
+              disabled={!canManage || savingSettings}
+              ariaLabel={t('soundboard.spaceEnabledLabel')}
+              onChange={(val) => void handleUpdateSpaceSettings({ soundboardEnabled: val })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-txt-primary">
+                {t('soundboard.allowInstanceSoundsLabel')}
+              </div>
+              <div className="text-xs text-txt-tertiary">
+                {t('soundboard.allowInstanceSoundsDesc')}
+              </div>
+            </div>
+            <Toggle
+              enabled={spaceSettings.allowInstanceSounds}
+              disabled={!canManage || savingSettings || !spaceSettings.soundboardEnabled}
+              ariaLabel={t('soundboard.allowInstanceSoundsLabel')}
+              onChange={(val) => void handleUpdateSpaceSettings({ allowInstanceSounds: val })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-txt-primary">
+                {t('soundboard.spaceMaxConcurrentLabel')}
+              </div>
+              <div className="text-xs text-txt-tertiary">
+                {t('soundboard.spaceMaxConcurrentDesc')}
+              </div>
+            </div>
+            <select
+              value={spaceSettings.maxConcurrentSounds === null ? '' : String(spaceSettings.maxConcurrentSounds)}
+              disabled={!canManage || savingSettings || !spaceSettings.soundboardEnabled}
+              aria-label={t('soundboard.spaceMaxConcurrentLabel')}
+              onChange={(e) => {
+                const raw = e.target.value;
+                void handleUpdateSpaceSettings({
+                  maxConcurrentSounds: raw === '' ? null : Number(raw),
+                });
+              }}
+              className="input-standard h-8 px-2.5 text-xs shrink-0"
+            >
+              <option value="">
+                {t('soundboard.inheritInstanceLimit', { max: instanceMaxConcurrent })}
+              </option>
+              {Array.from({ length: Math.max(1, instanceMaxConcurrent) }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={String(n)}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
@@ -477,6 +785,36 @@ export function SoundboardManagerPanel({
           </div>
         )}
       </div>
+
+      {scopeType === 'space' && scopeId && !loading && instanceSounds.length > 0 && (
+        <div className="space-y-2.5 pt-2 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">
+                {t('soundboard.instanceOverridesTitle')}
+              </div>
+              <p className="text-xs text-txt-tertiary mt-0.5">
+                {t('soundboard.instanceOverridesDesc')}
+              </p>
+            </div>
+            {instanceSounds.some((s) => s.hiddenInSpace) && (
+              <span className="px-2 py-0.5 rounded-full bg-surface-elevated text-[11px] font-mono tabular-nums text-txt-tertiary shrink-0">
+                {t('soundboard.hiddenCount', {
+                  value: instanceSounds.filter((s) => s.hiddenInSpace).length,
+                })}
+              </span>
+            )}
+          </div>
+
+          {spaceSettings && !spaceSettings.allowInstanceSounds && (
+            <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-txt-tertiary">
+              {t('soundboard.instanceSoundsHiddenBySpace')}
+            </div>
+          )}
+
+          {renderRows(instanceSounds, null, true)}
+        </div>
+      )}
 
       <SoundboardEditorModal
         isOpen={editor !== null}

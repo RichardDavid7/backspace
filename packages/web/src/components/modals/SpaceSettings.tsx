@@ -13,6 +13,8 @@ import { getApiForOrigin } from '../../utils/crossStoreResolvers';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { OverviewPanel, MembersPanel, RolesPanel, BansPanel, SettingsPanelSuspense } from './lazySettingsPanels';
 import { SoundboardManagerPanel } from '../voice/SoundboardManagerPanel';
+import { VoiceAudioSettingsCard, type VoiceAudioSettingsPatch } from './VoiceAudioSettingsCard';
+import { resolveInstanceAudioPolicy } from '../../utils/audioPolicy';
 import { useVisibilityOptions } from './spaceSettingsPanels/spaceOptions';
 import { ListInDirectoryConfirm } from './DirectoryConfirmations';
 import type { SpaceVisibility, JoinRequest, InstanceStreamingLimits } from '@backspace/shared';
@@ -598,9 +600,55 @@ function JoinRequestsSection({ spaceId }: { spaceId: string }) {
   );
 }
 
-type SpaceSettingsTab = 'overview' | 'discovery' | 'soundboard' | 'members' | 'roles' | 'bans';
+function SpaceAudioPanel({ spaceId }: { spaceId: string }) {
+  const { t } = useTranslation(['spaces']);
+  const space = useSpaceStore((s) => s.spaces.find((sp) => sp.id === spaceId));
+  const spaceOrigin = space?._instanceOrigin ?? '';
+  const instanceLimits = useSettingsStore((s) => selectStreamingLimits(s, spaceOrigin) ?? s.streamingLimits);
+  const [error, setError] = useState('');
 
-const SPACE_SETTINGS_TABS: readonly SpaceSettingsTab[] = ['overview', 'discovery', 'soundboard', 'members', 'roles', 'bans'];
+  if (!space) return null;
+
+  const parentPolicy = resolveInstanceAudioPolicy(instanceLimits);
+
+  const handleSave = async (patch: VoiceAudioSettingsPatch): Promise<void> => {
+    setError('');
+    try {
+      await useSpaceStore.getState().updateSpace(spaceId, patch);
+    } catch (err) {
+      setError(describeError(err));
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold text-txt-primary">{t('spaces:settings.audio.title')}</h2>
+        <p className="text-xs text-txt-tertiary mt-1">{t('spaces:settings.audio.description')}</p>
+      </div>
+
+      {error && (
+        <div className="p-2.5 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+          {error}
+        </div>
+      )}
+
+      <VoiceAudioSettingsCard
+        scope="space"
+        audioBitrateKbps={space.audioBitrateKbps ?? null}
+        maxAudioBitrateKbps={space.maxAudioBitrateKbps ?? null}
+        allowMusicMode={space.allowMusicMode ?? null}
+        allowStereoAudio={space.allowStereoAudio ?? null}
+        parentPolicy={parentPolicy}
+        onSave={handleSave}
+      />
+    </div>
+  );
+}
+
+type SpaceSettingsTab = 'overview' | 'discovery' | 'audio' | 'soundboard' | 'members' | 'roles' | 'bans';
+
+const SPACE_SETTINGS_TABS: readonly SpaceSettingsTab[] = ['overview', 'discovery', 'audio', 'soundboard', 'members', 'roles', 'bans'];
 
 function isSpaceSettingsTab(value: unknown): value is SpaceSettingsTab {
   return typeof value === 'string' && (SPACE_SETTINGS_TABS as readonly string[]).includes(value);
@@ -655,6 +703,7 @@ export function SpaceSettingsModal() {
     const allowed: Record<SpaceSettingsTab, boolean> = {
       overview: true,
       discovery: canManageSpace,
+      audio: canManageSpace,
       soundboard: showSoundboardTab,
       members: true,
       roles: canManageRoles,
@@ -707,6 +756,9 @@ export function SpaceSettingsModal() {
             {canManageSpace && (
               <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
             )}
+            {canManageSpace && (
+              <button onClick={() => handleTabClick('audio')} className={tabClass('audio')}>{t('spaces:settings.nav.tabs.audio')}</button>
+            )}
 
             <div className="border-t border-white/[0.04] my-2 mx-2" />
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
@@ -747,6 +799,9 @@ export function SpaceSettingsModal() {
               {canManageSpace && (
                 <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
               )}
+              {canManageSpace && (
+                <button onClick={() => handleTabClick('audio')} className={tabClass('audio')}>{t('spaces:settings.nav.tabs.audio')}</button>
+              )}
 
               <div className="border-t border-white/[0.04] my-2 mx-2" />
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
@@ -784,6 +839,7 @@ export function SpaceSettingsModal() {
               <SettingsPanelSuspense key={tab}>
                 {tab === 'overview' && <OverviewPanel spaceId={currentSpaceId} />}
                 {tab === 'discovery' && canManageSpace && <DiscoveryPanel spaceId={currentSpaceId} />}
+                {tab === 'audio' && canManageSpace && <SpaceAudioPanel spaceId={currentSpaceId} />}
                 {tab === 'soundboard' && showSoundboardTab && <SoundboardManagerPanel scopeType="space" scopeId={currentSpaceId} origin={spaceOrigin} />}
                 {tab === 'members' && <MembersPanel spaceId={currentSpaceId} />}
                 {tab === 'roles' && canManageRoles && <RolesPanel spaceId={currentSpaceId} />}

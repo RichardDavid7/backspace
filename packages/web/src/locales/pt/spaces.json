@@ -71,24 +71,28 @@
       "voiceAudio": {
         "sectionTitle": "Áudio de voz (Opus)",
         "autoBitrate": {
-          "label": "Usar bitrate padrão da instância",
-          "description": "Atualmente {{kbps}} kbps. Desative para definir um bitrate próprio para este canal de voz."
+          "label": "Usar bitrate padrão herdado",
+          "description": "Atualmente {{kbps}} kbps (da instância). Desative para definir um bitrate padrão próprio.",
+          "descriptionInherited": "Atualmente {{kbps}} kbps (herdado). Desative para definir um bitrate padrão próprio."
         },
-        "bitrateLabel": "Bitrate do canal",
+        "bitrateLabel": "Bitrate padrão",
         "allowMusicMode": {
           "label": "Permitir modo Música no Opus",
-          "description": "Permite que participantes deste canal usem o modo Música.",
-          "disabledByInstance": "O modo Música está desativado nas configurações da instância."
+          "description": "Permite que participantes usem o modo Música no Opus.",
+          "disabledByInstance": "O modo Música está desativado nas configurações da instância.",
+          "disabledByParent": "O modo Música está desativado em um nível superior (instância, espaço ou categoria)."
         },
         "autoMaxBitrate": {
-          "label": "Usar bitrate máximo da instância",
-          "description": "Atualmente {{kbps}} kbps. Desative para definir um teto máximo de bitrate para este canal de voz."
+          "label": "Usar bitrate máximo herdado",
+          "description": "Atualmente {{kbps}} kbps (da instância). Desative para definir um teto máximo de bitrate menor.",
+          "descriptionInherited": "Atualmente {{kbps}} kbps (herdado). Desative para definir um teto máximo de bitrate menor."
         },
-        "maxBitrateLabel": "Bitrate máximo do canal",
+        "maxBitrateLabel": "Bitrate máximo",
         "allowStereoAudio": {
           "label": "Permitir áudio estéreo",
-          "description": "Permite que participantes deste canal transmitam áudio Opus estéreo em 2 canais.",
-          "disabledByInstance": "O áudio estéreo está desativado nas configurações da instância."
+          "description": "Permite que participantes transmitam áudio Opus estéreo em 2 canais.",
+          "disabledByInstance": "O áudio estéreo está desativado nas configurações da instância.",
+          "disabledByParent": "O áudio estéreo está desativado em um nível superior (instância, espaço ou categoria)."
         }
       }
     },
@@ -296,9 +300,14 @@
       "tabs": {
         "overview": "Visão geral",
         "discovery": "Descoberta",
+        "audio": "Áudio",
         "roles": "Cargos",
         "bans": "Banimentos"
       }
+    },
+    "audio": {
+      "title": "Áudio (Opus)",
+      "description": "Bitrate padrão de voz, teto máximo e recursos do Opus para este espaço. Categorias e canais de voz herdam estes limites e podem restringi-los ainda mais."
     },
     "discardChanges": "Descartar",
     "overview": {

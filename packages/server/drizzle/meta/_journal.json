@@ -253,6 +253,20 @@
       "when": 1795303200000,
       "tag": "0035_everyone_use_soundboard",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1795310400000,
+      "tag": "0036_space_soundboard_overrides",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1795314000000,
+      "tag": "0037_space_category_opus_audio",
+      "breakpoints": true
     }
   ]
 }
