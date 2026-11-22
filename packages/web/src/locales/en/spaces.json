@@ -480,7 +480,8 @@
       "stream": "Stream",
       "disconnectMembers": "Disconnect Members",
       "mentionEveryone": "Mention @everyone, @here and Roles",
-      "useSoundboard": "Use Soundboard"
+      "useSoundboard": "Use Soundboard",
+      "manageSoundboard": "Manage Soundboard"
     },
     "tristate": {
       "deny": "Deny",

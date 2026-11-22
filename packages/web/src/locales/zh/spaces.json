@@ -477,7 +477,8 @@
       "stream": "视频推流",
       "disconnectMembers": "断开成员连接",
       "mentionEveryone": "提及 @everyone、@here 和身份组",
-      "useSoundboard": "使用音效板"
+      "useSoundboard": "使用音效板",
+      "manageSoundboard": "管理音效板"
     },
     "tristate": {
       "deny": "拒绝",

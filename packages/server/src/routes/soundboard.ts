@@ -9,6 +9,7 @@ import { getDb, schema } from '../db/index.js';
 import { config } from '../config.js';
 import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
+import { hasPermission, PermissionBits } from '../utils/permissions.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 
 const MAX_SOUNDBOARD_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -85,14 +86,8 @@ function canManageScope(userId: string, scopeType: SoundboardScopeType, scopeId:
   if (scopeType === 'instance') {
     return isInstanceAdmin(userId);
   }
-  const db = getDb();
   if (scopeType === 'space') {
-    if (isInstanceAdmin(userId)) return true;
-    const member = db.select({ userId: schema.spaceMembers.userId })
-      .from(schema.spaceMembers)
-      .where(and(eq(schema.spaceMembers.spaceId, scopeId), eq(schema.spaceMembers.userId, userId)))
-      .get();
-    return Boolean(member);
+    return hasPermission(userId, scopeId, PermissionBits.MANAGE_SOUNDBOARD);
   }
   return false;
 }

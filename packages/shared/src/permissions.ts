@@ -28,6 +28,9 @@ export const PermissionBits = {
   STREAM:               1n << 25n,
   DISCONNECT_MEMBERS:   1n << 26n,
   USE_SOUNDBOARD:       1n << 27n,
+  // Lets a member upload, edit, reorder and delete custom soundboard clips in a
+  // space. Deliberately not in DEFAULT_EVERYONE_PERMISSIONS: granted per role.
+  MANAGE_SOUNDBOARD:    1n << 28n,
 } as const;
 
 export type PermissionBit = (typeof PermissionBits)[keyof typeof PermissionBits];
