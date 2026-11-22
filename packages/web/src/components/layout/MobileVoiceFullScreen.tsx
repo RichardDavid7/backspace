@@ -312,6 +312,22 @@ export function MobileVoiceFullScreen() {
         <span className="text-xs text-txt-tertiary">
           {t('voice:mobileCall.connectedCount', { count: participants.length })}
         </span>
+        {canUseSoundboard && (
+          <button
+            type="button"
+            onClick={() => setSoundboardOpen((v) => !v)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              soundboardOpen
+                ? 'bg-accent-primary/20 text-accent-primary'
+                : 'text-txt-secondary hover:text-txt-primary'
+            }`}
+            aria-label={t('voice:soundboard.title')}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+            </svg>
+          </button>
+        )}
         {!isDmCall && (
           <button
             onClick={() => pushMobileScreen('members')}
@@ -546,23 +562,6 @@ export function MobileVoiceFullScreen() {
             />
           </svg>
         </button>
-
-        {/* Soundboard */}
-        {canUseSoundboard && (
-          <button
-            onClick={() => setSoundboardOpen((v) => !v)}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-              soundboardOpen
-                ? 'bg-accent-primary/20 text-accent-primary'
-                : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
-            }`}
-            aria-label={t('voice:soundboard.title')}
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-            </svg>
-          </button>
-        )}
 
         {/* Disconnect */}
         <button

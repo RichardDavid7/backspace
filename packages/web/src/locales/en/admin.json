@@ -462,7 +462,8 @@
       "storage": "Storage",
       "updates": "Updates",
       "users": "Users",
-      "telemetry": "Say hi"
+      "telemetry": "Say hi",
+      "soundboard": "Soundboard"
     }
   },
   "soundboard": {

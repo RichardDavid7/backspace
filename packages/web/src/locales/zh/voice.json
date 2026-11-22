@@ -326,6 +326,6 @@
     "slotUsage": "{{current}} / {{max}} 个",
     "limitReached": "已达到此实例允许的自定义音效上限。",
     "disabledByInstance": "实例管理员已禁用空间的自定义音效。",
-    "previewHint": "右键点击音效可仅在本地试听"
+    "previewHint": "右键点击或长按音效即可本地试听"
   }
 }

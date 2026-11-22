@@ -34,6 +34,7 @@ import {
   RegistrationPanel,
   FederationPanel,
   StreamingPanel,
+  SoundboardPanel,
   StoragePanel,
   UsersPanel,
   SettingsPanelSuspense,
@@ -105,6 +106,12 @@ export const mobileScreenMap: Readonly<Record<string, (params?: Record<string, s
     <div className="flex flex-col h-full bg-surface-base">
       <MobileScreenHeader title={i18n.t('settings:instance.tabs.streaming')} rightActions={<TransferIndicator />} />
       <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><StreamingPanel /></SettingsPanelSuspense></div>
+    </div>
+  ),
+  'settings-instance-soundboard': () => (
+    <div className="flex flex-col h-full bg-surface-base">
+      <MobileScreenHeader title={i18n.t('voice:soundboard.title')} rightActions={<TransferIndicator />} />
+      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><SoundboardPanel /></SettingsPanelSuspense></div>
     </div>
   ),
   'settings-instance-storage': () => (

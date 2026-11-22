@@ -492,7 +492,8 @@
       "storage": "Хранилище",
       "updates": "Обновления",
       "users": "Пользователи",
-      "telemetry": "Привет"
+      "telemetry": "Привет",
+      "soundboard": "Звуковая панель"
     }
   },
   "soundboard": {

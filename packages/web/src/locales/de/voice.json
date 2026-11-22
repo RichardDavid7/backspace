@@ -328,6 +328,6 @@
     "slotUsage": "{{current}} von {{max}}",
     "limitReached": "Dieser Bereich hat das Instanzlimit für eigene Sounds erreicht.",
     "disabledByInstance": "Eigene Sounds für Spaces sind vom Instanz-Admin deaktiviert.",
-    "previewHint": "Rechtsklick auf einen Sound für lokale Vorschau"
+    "previewHint": "Rechtsklick oder gedrückt halten für lokale Vorschau"
   }
 }
