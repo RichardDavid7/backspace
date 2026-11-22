@@ -144,6 +144,7 @@ export function VoiceAudioSettingsCard({
             value={clampedDraft}
             onChange={(e) => setBitrateDraft(Number(e.target.value))}
             onPointerUp={() => commitBitrate(clampedDraft)}
+            onBlur={() => commitBitrate(clampedDraft)}
             onKeyUp={(e) => {
               if (SLIDER_COMMIT_KEYS.has(e.key)) commitBitrate(clampedDraft);
             }}
@@ -189,6 +190,7 @@ export function VoiceAudioSettingsCard({
             value={clampedMaxDraft}
             onChange={(e) => setMaxBitrateDraft(Number(e.target.value))}
             onPointerUp={() => commitMaxBitrate(clampedMaxDraft)}
+            onBlur={() => commitMaxBitrate(clampedMaxDraft)}
             onKeyUp={(e) => {
               if (SLIDER_COMMIT_KEYS.has(e.key)) commitMaxBitrate(clampedMaxDraft);
             }}
