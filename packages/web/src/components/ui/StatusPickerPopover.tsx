@@ -283,7 +283,7 @@ export function StatusPickerPopover({
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed z-50 w-64 max-w-[calc(100vw-1rem)] glass-bubble rounded-xl border border-border-soft shadow-2xl p-2.5 space-y-2.5 text-txt-primary"
+      className="fixed z-[200] w-64 max-w-[calc(100vw-1rem)] glass-bubble rounded-xl border border-border-soft shadow-2xl p-2.5 space-y-2.5 text-txt-primary"
       style={{
         left: pos.left,
         ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }),
