@@ -9,25 +9,29 @@ import { useFormatters } from '../../i18n/formatters';
 const REVERT_STORAGE_KEY = 'backspace_status_revert';
 
 interface StatusRevertRecord {
+  userId: string;
   previousStatus: ChosenUserStatus;
   revertAt: number;
 }
 
 let _revertTimer: ReturnType<typeof setTimeout> | null = null;
 
-function readRevertRecord(): StatusRevertRecord | null {
+function readRevertRecord(expectedUserId?: string | null): StatusRevertRecord | null {
   try {
     const raw = localStorage.getItem(REVERT_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StatusRevertRecord>;
     if (
-      (parsed.previousStatus === 'online'
+      typeof parsed.userId === 'string'
+      && parsed.userId.length > 0
+      && (!expectedUserId || parsed.userId === expectedUserId)
+      && (parsed.previousStatus === 'online'
         || parsed.previousStatus === 'idle'
         || parsed.previousStatus === 'dnd')
       && typeof parsed.revertAt === 'number'
       && Number.isFinite(parsed.revertAt)
     ) {
-      return { previousStatus: parsed.previousStatus, revertAt: parsed.revertAt };
+      return { userId: parsed.userId, previousStatus: parsed.previousStatus, revertAt: parsed.revertAt };
     }
   } catch {
     // ignore storage errors
@@ -52,6 +56,10 @@ function scheduleStatusRevert(record: StatusRevertRecord): void {
     clearTimeout(_revertTimer);
     _revertTimer = null;
   }
+  const activeUserId = useAuthStore.getState().user?.id;
+  if (!activeUserId || activeUserId !== record.userId) {
+    return;
+  }
   const delay = record.revertAt - Date.now();
   if (delay <= 0) {
     clearRevertTimer();
@@ -65,17 +73,37 @@ function scheduleStatusRevert(record: StatusRevertRecord): void {
   }
   _revertTimer = setTimeout(() => {
     _revertTimer = null;
+    const currentUserId = useAuthStore.getState().user?.id;
+    if (!currentUserId || currentUserId !== record.userId) return;
     clearRevertTimer();
     void useAuthStore.getState().updateProfile({ status: record.previousStatus }).catch(() => {});
   }, delay);
 }
 
-/** Resume any pending status-revert timer on app mount. */
+/** Resume any pending status-revert timer on app mount and when returning from sleep/background. */
 export function useStatusRevertBootstrap(): void {
+  const userId = useAuthStore((s) => s.user?.id ?? null);
   useEffect(() => {
-    const rec = readRevertRecord();
-    if (rec) scheduleStatusRevert(rec);
-  }, []);
+    if (!userId) {
+      if (_revertTimer) {
+        clearTimeout(_revertTimer);
+        _revertTimer = null;
+      }
+      return;
+    }
+    const checkPending = () => {
+      const rec = readRevertRecord(userId);
+      if (rec) scheduleStatusRevert(rec);
+    };
+    checkPending();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') checkPending();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [userId]);
 }
 
 const STATUS_OPTIONS: readonly {
@@ -146,7 +174,7 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
 
   const [duration, setDuration] = useState<DurationOption>('none');
   const [saving, setSaving] = useState(false);
-  const [revertRecord, setRevertRecord] = useState<StatusRevertRecord | null>(() => readRevertRecord());
+  const [revertRecord, setRevertRecord] = useState<StatusRevertRecord | null>(() => readRevertRecord(user.id));
   const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
   const popoverRef = React.useRef<HTMLDivElement>(null);
 
@@ -155,7 +183,8 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
       setPos(null);
       return;
     }
-    setRevertRecord(readRevertRecord());
+    setDuration('none');
+    setRevertRecord(readRevertRecord(user.id));
     const updatePos = () => {
       const el = anchorRef.current;
       if (!el) return;
@@ -191,10 +220,21 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
   const handleSelectStatus = async (nextStatus: ChosenUserStatus) => {
     setSaving(true);
     try {
-      const revertAt = nextStatus !== currentStatus ? computeRevertAt(duration) : null;
-      await updateProfile({ status: nextStatus });
-      if (revertAt) {
-        const record: StatusRevertRecord = { previousStatus: currentStatus, revertAt };
+      const revertAt = computeRevertAt(duration);
+      const existing = readRevertRecord(user.id);
+      const previousStatus: ChosenUserStatus = nextStatus !== currentStatus
+        ? (existing && existing.revertAt > Date.now() && existing.previousStatus !== nextStatus
+          ? existing.previousStatus
+          : currentStatus)
+        : (existing && existing.revertAt > Date.now() && existing.previousStatus !== nextStatus
+          ? existing.previousStatus
+          : 'online');
+
+      if (nextStatus !== currentStatus) {
+        await updateProfile({ status: nextStatus });
+      }
+      if (revertAt && previousStatus !== nextStatus) {
+        const record: StatusRevertRecord = { userId: user.id, previousStatus, revertAt };
         scheduleStatusRevert(record);
         setRevertRecord(record);
       } else {
