@@ -433,7 +433,7 @@ export class AudioManager {
   }
 
   async setRnnoiseEnabled(enabled: boolean): Promise<void> {
-    if (enabled === this.rnnoiseEnabled && this.rnnoiseReady) return;
+    if (enabled === this.rnnoiseEnabled && (!enabled || this.rnnoiseReady)) return;
     if (!this.isInitialized) this.initContext();
 
     if (enabled && !this.rnnoiseReady) {

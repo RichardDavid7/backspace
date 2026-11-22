@@ -178,16 +178,29 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
       return;
     }
 
+    let cancelled = false;
+    let inFlight = false;
+
     const poll = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        await runPoll();
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const runPoll = async () => {
       const room = getActiveRoom();
       if (!room) {
-        setSnapshot(null);
+        if (!cancelled) setSnapshot(null);
         return;
       }
 
       const pcs = discoverPeerConnections(room as any);
       if (pcs.length === 0) {
-        setSnapshot(null);
+        if (!cancelled) setSnapshot(null);
         return;
       }
 
@@ -214,6 +227,7 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
         } catch {
           continue;
         }
+        if (cancelled) return;
 
         // Pass 1: Collect codecs, find transport's selected candidate pair
         let selectedPairId: string | null = null;
@@ -329,6 +343,7 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
           } catch {
             continue;
           }
+          if (cancelled) return;
 
           // Build per-sender codec map
           const senderCodecMap = new Map<string, CodecInfo>();
@@ -468,6 +483,7 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
           } catch {
             continue;
           }
+          if (cancelled) return;
 
           // Build per-receiver codec map
           const recvCodecMap = new Map<string, CodecInfo>();
@@ -630,6 +646,7 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
       });
 
       // ── Step G: Cleanup stale prevSample entries ──
+      if (cancelled) return;
       for (const key of prev.keys()) {
         if (!seenKeys.has(key)) {
           prev.delete(key);
@@ -639,9 +656,14 @@ export function useTrackStats(enabled: boolean): TrackStatsSnapshot | null {
       setSnapshot({ network, audioTracks, videoTracks: filteredVideoTracks });
     };
 
-    poll();
-    const interval = setInterval(poll, 2000);
-    return () => clearInterval(interval);
+    void poll();
+    const interval = setInterval(() => {
+      void poll();
+    }, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [enabled]);
 
   return snapshot;
