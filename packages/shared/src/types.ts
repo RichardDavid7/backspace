@@ -312,8 +312,12 @@ export interface Channel {
   myPermissions?: string; // Computed per-user BigInt decimal string
   /** Optional per-voice-channel target Opus bitrate in kbps (`null` = instance default). */
   audioBitrateKbps?: number | null;
+  /** Optional per-voice-channel maximum Opus bitrate cap in kbps (`null` = inherit from instance). */
+  maxAudioBitrateKbps?: number | null;
   /** Optional per-voice-channel Opus Music mode toggle (`null` = inherit from instance). */
   allowMusicMode?: boolean | null;
+  /** Optional per-voice-channel Opus Stereo toggle (`null` = inherit from instance). */
+  allowStereoAudio?: boolean | null;
 }
 
 export interface ReadState {
@@ -890,8 +894,12 @@ export interface UpdateChannelRequest {
   categoryId?: string | null;
   /** Voice channels: `null` resets to instance default. */
   audioBitrateKbps?: number | null;
+  /** Voice channels: `null` inherits instance maximum bitrate. */
+  maxAudioBitrateKbps?: number | null;
   /** Voice channels: `null` inherits instance policy. */
   allowMusicMode?: boolean | null;
+  /** Voice channels: `null` inherits instance stereo policy. */
+  allowStereoAudio?: boolean | null;
 }
 
 export interface UpdateSpaceRequest {

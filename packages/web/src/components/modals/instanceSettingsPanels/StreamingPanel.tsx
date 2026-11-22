@@ -597,6 +597,14 @@ export function StreamingPanel() {
                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
                   [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+                style={{
+                  background: (() => {
+                    const max = draft.maxAudioBitrateKbps ?? 512;
+                    const val = Math.min(draft.defaultAudioBitrateKbps ?? 64, max);
+                    const pct = max > 8 ? ((val - 8) / (max - 8)) * 100 : 100;
+                    return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+                  })(),
+                }}
               />
             </div>
 
@@ -623,6 +631,13 @@ export function StreamingPanel() {
                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
                   [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0"
+                style={{
+                  background: (() => {
+                    const val = draft.maxAudioBitrateKbps ?? 512;
+                    const pct = ((val - 8) / (512 - 8)) * 100;
+                    return `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${pct}%, rgb(var(--interactive-muted)) ${pct}%, rgb(var(--interactive-muted)) 100%)`;
+                  })(),
+                }}
               />
             </div>
           </div>

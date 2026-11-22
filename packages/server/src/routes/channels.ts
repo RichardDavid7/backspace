@@ -47,7 +47,9 @@ function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
     position: row.position ?? 0,
     categoryId: row.categoryId ?? null,
     audioBitrateKbps: row.audioBitrateKbps ?? null,
+    maxAudioBitrateKbps: row.maxAudioBitrateKbps ?? null,
     allowMusicMode: row.allowMusicMode === null || row.allowMusicMode === undefined ? null : row.allowMusicMode === 1,
+    allowStereoAudio: row.allowStereoAudio === null || row.allowStereoAudio === undefined ? null : row.allowStereoAudio === 1,
     createdAt: row.createdAt,
   };
 }
@@ -379,7 +381,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, topic, position, categoryId, audioBitrateKbps, allowMusicMode } = request.body;
+    const { name, topic, position, categoryId, audioBitrateKbps, maxAudioBitrateKbps, allowMusicMode, allowStereoAudio } = request.body;
     const db = getDb();
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
@@ -393,6 +395,20 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const updates: Partial<typeof schema.channels.$inferInsert> = {};
+
+    const touchesAudio = audioBitrateKbps !== undefined
+      || maxAudioBitrateKbps !== undefined
+      || allowMusicMode !== undefined
+      || allowStereoAudio !== undefined;
+    if (touchesAudio && channel.type !== 'voice') {
+      return sendError(reply, 400, 'validation_failed');
+    }
+    if (allowMusicMode !== undefined && allowMusicMode !== null && typeof allowMusicMode !== 'boolean') {
+      return sendError(reply, 400, 'validation_failed');
+    }
+    if (allowStereoAudio !== undefined && allowStereoAudio !== null && typeof allowStereoAudio !== 'boolean') {
+      return sendError(reply, 400, 'validation_failed');
+    }
 
     if (name !== undefined) {
       if (typeof name !== 'string') {
@@ -450,12 +466,47 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    if (maxAudioBitrateKbps !== undefined) {
+      if (maxAudioBitrateKbps === null) {
+        updates.maxAudioBitrateKbps = null;
+      } else {
+        if (typeof maxAudioBitrateKbps !== 'number' || !Number.isFinite(maxAudioBitrateKbps) || maxAudioBitrateKbps < 8 || maxAudioBitrateKbps > 512) {
+          return sendError(reply, 400, 'validation_failed');
+        }
+        const inst = db.select({ maxAudioBitrateKbps: schema.instanceSettings.maxAudioBitrateKbps })
+          .from(schema.instanceSettings)
+          .where(eq(schema.instanceSettings.id, 1))
+          .get();
+        const cap = inst?.maxAudioBitrateKbps ?? 512;
+        updates.maxAudioBitrateKbps = Math.min(Math.round(maxAudioBitrateKbps), cap);
+      }
+    }
+
     if (allowMusicMode !== undefined) {
       if (allowMusicMode === null) {
         updates.allowMusicMode = null;
       } else {
         updates.allowMusicMode = allowMusicMode ? 1 : 0;
       }
+    }
+
+    if (allowStereoAudio !== undefined) {
+      if (allowStereoAudio === null) {
+        updates.allowStereoAudio = null;
+      } else {
+        updates.allowStereoAudio = allowStereoAudio ? 1 : 0;
+      }
+    }
+
+    // Keep channel default bitrate <= channel max bitrate when both are set
+    const effectiveChanMax = (updates.maxAudioBitrateKbps !== undefined
+      ? updates.maxAudioBitrateKbps
+      : channel.maxAudioBitrateKbps) as number | null;
+    const effectiveChanDefault = (updates.audioBitrateKbps !== undefined
+      ? updates.audioBitrateKbps
+      : channel.audioBitrateKbps) as number | null;
+    if (effectiveChanMax !== null && effectiveChanDefault !== null && effectiveChanDefault > effectiveChanMax) {
+      updates.audioBitrateKbps = effectiveChanMax;
     }
 
     if (Object.keys(updates).length === 0) {

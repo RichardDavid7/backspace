@@ -108,7 +108,9 @@ export const channels = sqliteTable('channels', {
   position: integer('position').default(0),
   categoryId: text('category_id'),
   audioBitrateKbps: integer('audio_bitrate_kbps'),
+  maxAudioBitrateKbps: integer('max_audio_bitrate_kbps'),
   allowMusicMode: integer('allow_music_mode'),
+  allowStereoAudio: integer('allow_stereo_audio'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_channels_space_id').on(table.spaceId),

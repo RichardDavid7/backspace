@@ -271,7 +271,9 @@ export interface EffectiveAudioInputs {
   audioBitrateAuto: boolean;
   audioBitrate: number;
   channelAudioBitrateKbps?: number | null;
+  channelMaxAudioBitrateKbps?: number | null;
   channelAllowMusicMode?: boolean | null;
+  channelAllowStereoAudio?: boolean | null;
   instanceDefaultAudioBitrateKbps?: number;
   instanceMaxAudioBitrateKbps?: number;
   instanceAllowMusicMode?: boolean;
@@ -280,26 +282,30 @@ export interface EffectiveAudioInputs {
 
 /**
  * Resolves the effective Opus encoding settings for the current voice room:
+ * - Effective max bitrate is `min(instanceMax, channelMax)` when a channel cap is set.
  * - Automatic bitrate follows the channel's configured bitrate, or the
  *   instance's default bitrate when the channel has no override.
- * - Manual bitrate is capped at the instance's maximum allowed audio bitrate.
- * - Music mode is permitted only when both the instance and channel allow it.
- * - Stereo is permitted only when the instance allows it.
+ * - Manual bitrate is capped at the effective maximum allowed audio bitrate.
+ * - Music mode and Stereo are permitted only when both the instance and channel allow them.
  */
 export function resolveEffectiveAudioConfig(input: EffectiveAudioInputs): AudioPublishConfig {
   const instanceMax = Math.max(8, Math.min(512, input.instanceMaxAudioBitrateKbps ?? 512));
-  const instanceDefault = Math.max(8, Math.min(instanceMax, input.instanceDefaultAudioBitrateKbps ?? 64));
+  const effectiveMax = input.channelMaxAudioBitrateKbps != null
+    ? Math.max(8, Math.min(instanceMax, input.channelMaxAudioBitrateKbps))
+    : instanceMax;
+  const instanceDefault = Math.max(8, Math.min(effectiveMax, input.instanceDefaultAudioBitrateKbps ?? 64));
   const channelTarget = input.channelAudioBitrateKbps != null
-    ? Math.max(8, Math.min(instanceMax, input.channelAudioBitrateKbps))
+    ? Math.max(8, Math.min(effectiveMax, input.channelAudioBitrateKbps))
     : instanceDefault;
 
   const effectiveBitrate = input.audioBitrateAuto
     ? channelTarget
-    : Math.max(8, Math.min(instanceMax, input.audioBitrate));
+    : Math.max(8, Math.min(effectiveMax, input.audioBitrate));
 
   const musicAllowed = (input.instanceAllowMusicMode ?? true) && (input.channelAllowMusicMode ?? true);
   const effectiveMode: AudioMode = input.audioMode === 'music' && musicAllowed ? 'music' : 'voice';
-  const effectiveStereo = input.audioStereo && (input.instanceAllowStereoAudio ?? true);
+  const stereoAllowed = (input.instanceAllowStereoAudio ?? true) && (input.channelAllowStereoAudio ?? true);
+  const effectiveStereo = input.audioStereo && stereoAllowed;
 
   return {
     audioMode: effectiveMode,
@@ -344,7 +350,9 @@ function getEffectiveAudioConfigForCurrentRoom(): AudioPublishConfig {
     audioBitrateAuto: vs.audioBitrateAuto,
     audioBitrate: vs.audioBitrate,
     channelAudioBitrateKbps: channel?.audioBitrateKbps ?? null,
+    channelMaxAudioBitrateKbps: channel?.maxAudioBitrateKbps ?? null,
     channelAllowMusicMode: channel?.allowMusicMode ?? null,
+    channelAllowStereoAudio: channel?.allowStereoAudio ?? null,
     instanceDefaultAudioBitrateKbps: limits?.defaultAudioBitrateKbps,
     instanceMaxAudioBitrateKbps: limits?.maxAudioBitrateKbps,
     instanceAllowMusicMode: limits?.allowMusicMode,
@@ -437,9 +445,17 @@ export function useLiveKit() {
     const cvId = useVoiceStore.getState().currentVoiceChannelId;
     return cvId ? s.channels.find((c) => c.id === cvId)?.audioBitrateKbps ?? null : null;
   });
+  const activeChannelMaxAudioBitrate = useSpaceStore((s) => {
+    const cvId = useVoiceStore.getState().currentVoiceChannelId;
+    return cvId ? s.channels.find((c) => c.id === cvId)?.maxAudioBitrateKbps ?? null : null;
+  });
   const activeChannelAllowMusic = useSpaceStore((s) => {
     const cvId = useVoiceStore.getState().currentVoiceChannelId;
     return cvId ? s.channels.find((c) => c.id === cvId)?.allowMusicMode ?? null : null;
+  });
+  const activeChannelAllowStereo = useSpaceStore((s) => {
+    const cvId = useVoiceStore.getState().currentVoiceChannelId;
+    return cvId ? s.channels.find((c) => c.id === cvId)?.allowStereoAudio ?? null : null;
   });
 
   const lastMicGenRef = useRef(0);
@@ -718,7 +734,7 @@ export function useLiveKit() {
       cancelled = true;
       unsubscribeResume();
     };
-  }, [isMuted, isDeafened, spaceMutedUserIds, spaceDeafenedUserIds, permissionMutedUserIds, inputDeviceId, inputVolume, isConnected, echoCancellation, noiseSuppression, autoGainControl, rnnoiseEnabled, audioMode, audioStereo, audioBitrateAuto, audioBitrate, activeChannelAudioBitrate, activeChannelAllowMusic, streamHostLimits, micPermissionDenied]);
+  }, [isMuted, isDeafened, spaceMutedUserIds, spaceDeafenedUserIds, permissionMutedUserIds, inputDeviceId, inputVolume, isConnected, echoCancellation, noiseSuppression, autoGainControl, rnnoiseEnabled, audioMode, audioStereo, audioBitrateAuto, audioBitrate, activeChannelAudioBitrate, activeChannelMaxAudioBitrate, activeChannelAllowMusic, activeChannelAllowStereo, streamHostLimits, micPermissionDenied]);
 
   // Subscribe to upstream-input-track-end events from AudioManager whenever a
   // room is connected. The published mic track is a clone of a WebAudio

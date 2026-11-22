@@ -79,6 +79,16 @@
           "label": "Opus-Musikmodus erlauben",
           "description": "Erlaubt Teilnehmern in diesem Kanal den Musikmodus zu nutzen.",
           "disabledByInstance": "Der Musikmodus ist auf Instanzebene deaktiviert."
+        },
+        "autoMaxBitrate": {
+          "label": "Instanz-Maximalbitrate verwenden",
+          "description": "Derzeit {{kbps}} kbps. Deaktivieren, um eine niedrigere maximale Bitrate für diesen Sprachkanal festzulegen."
+        },
+        "maxBitrateLabel": "Maximale Kanal-Bitrate",
+        "allowStereoAudio": {
+          "label": "Stereo-Audio erlauben",
+          "description": "Erlaubt Teilnehmern dieses Kanals, 2-Kanal-Stereo-Opus-Audio zu senden.",
+          "disabledByInstance": "Stereo-Audio ist in den Instanzeinstellungen deaktiviert."
         }
       }
     },
