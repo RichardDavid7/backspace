@@ -950,7 +950,7 @@ function UserAreaPanel({
   }, [openPanel]);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent | TouchEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpenPanel(null);
         setShowInputDeviceList(false);
@@ -958,7 +958,11 @@ function UserAreaPanel({
       }
     };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
   }, []);
 
   const togglePanel = (panel: 'input' | 'output') => {

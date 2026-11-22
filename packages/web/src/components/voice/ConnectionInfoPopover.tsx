@@ -202,7 +202,7 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
   // Click-outside to close
   useEffect(() => {
     if (!open) return;
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
       // The anchor owns its own toggle: closing here on its mousedown would
       // make the following click re-open the popover instead of closing it.
@@ -212,7 +212,11 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
       }
     };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
   }, [open, onClose, anchorRef]);
 
   if (!open) return null;

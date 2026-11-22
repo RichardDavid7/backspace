@@ -17,6 +17,7 @@ import {
 } from '../../utils/voiceActions';
 import { VoiceGrid } from '../voice/VoiceGrid';
 import { SoundboardPopover } from '../voice/SoundboardPopover';
+import { usePortalContainer } from '../../hooks/usePortalContainer';
 import { deriveGridTiles } from '../../hooks/useLiveKit';
 import { requestMicPermission } from '../../utils/voice';
 
@@ -36,6 +37,7 @@ import { requestMicPermission } from '../../utils/voice';
  */
 export function MobileVoiceFullScreen() {
   const { t } = useTranslation(['voice', 'common']);
+  const portalContainer = usePortalContainer();
   const popMobileScreen = useUIStore((s) => s.popMobileScreen);
   const pushMobileScreen = useUIStore((s) => s.pushMobileScreen);
 
@@ -655,7 +657,7 @@ export function MobileVoiceFullScreen() {
               </button>
             ))}
           </div>,
-          document.body,
+          portalContainer,
         )}
       {soundboardOpen &&
         createPortal(
@@ -668,7 +670,7 @@ export function MobileVoiceFullScreen() {
               onClose={() => setSoundboardOpen(false)}
             />
           </div>,
-          document.body,
+          portalContainer,
         )}
     </div>
   );

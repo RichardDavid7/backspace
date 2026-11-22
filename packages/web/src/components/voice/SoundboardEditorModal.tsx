@@ -11,9 +11,27 @@ import {
   trimAndNormalizeToWav,
 } from '../../utils/audioClipEditor';
 import { EmojiPicker } from '../chat/EmojiPicker';
+import { AudioManager } from '../../audio/AudioManager';
 
 const MAX_CLIP_SECONDS = 10;
 const TARGET_NORMALIZE_PEAK = 0.891; // -1 dBFS
+
+/**
+ * Decode an audio file without opening a hardware AudioContext (avoids leaking
+ * PipeWire/PulseAudio handles on Linux and iOS Safari gesture restrictions).
+ */
+async function decodeAudioArrayBuffer(ab: ArrayBuffer): Promise<AudioBuffer> {
+  if (typeof OfflineAudioContext !== 'undefined') {
+    const offline = new OfflineAudioContext(1, 1, 48000);
+    return offline.decodeAudioData(ab);
+  }
+  const ctx = new AudioContext();
+  try {
+    return await ctx.decodeAudioData(ab);
+  } finally {
+    await ctx.close().catch(() => {});
+  }
+}
 
 interface SoundboardEditorModalProps {
   isOpen: boolean;
@@ -56,8 +74,8 @@ export function SoundboardEditorModal({
   const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const previewCtxRef = useRef<AudioContext | null>(null);
   const previewSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const releasePreviewSessionRef = useRef<(() => void) | null>(null);
 
   const stopPreview = () => {
     try {
@@ -66,6 +84,8 @@ export function SoundboardEditorModal({
       // ignore already-stopped source
     }
     previewSourceRef.current = null;
+    releasePreviewSessionRef.current?.();
+    releasePreviewSessionRef.current = null;
     setIsPlayingPreview(false);
   };
 
@@ -100,9 +120,7 @@ export function SoundboardEditorModal({
           const resp = await fetch(url);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const ab = await resp.arrayBuffer();
-          const ctx = new AudioContext();
-          const decoded = await ctx.decodeAudioData(ab);
-          await ctx.close().catch(() => {});
+          const decoded = await decodeAudioArrayBuffer(ab);
           if (cancelled) return;
           setAudioBuffer(decoded);
           setStartSec(0);
@@ -133,10 +151,6 @@ export function SoundboardEditorModal({
   useEffect(() => {
     return () => {
       stopPreview();
-      if (previewCtxRef.current) {
-        void previewCtxRef.current.close().catch(() => {});
-        previewCtxRef.current = null;
-      }
     };
   }, []);
 
@@ -155,9 +169,7 @@ export function SoundboardEditorModal({
     setLoadingAudio(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const ctx = new AudioContext();
-      const decoded = await ctx.decodeAudioData(arrayBuffer);
-      await ctx.close().catch(() => {});
+      const decoded = await decodeAudioArrayBuffer(arrayBuffer);
 
       setAudioBuffer(decoded);
       setStartSec(0);
@@ -200,13 +212,11 @@ export function SoundboardEditorModal({
     }
 
     try {
-      if (!previewCtxRef.current || previewCtxRef.current.state === 'closed') {
-        previewCtxRef.current = new AudioContext();
-      }
-      const ctx = previewCtxRef.current;
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-      }
+      const audioManager = AudioManager.getInstance();
+      releasePreviewSessionRef.current?.();
+      releasePreviewSessionRef.current = audioManager.acquireAudioSession();
+      await audioManager.resumeContext();
+      const ctx = audioManager.ensureContext();
 
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
@@ -224,10 +234,14 @@ export function SoundboardEditorModal({
       gain.gain.value = previewGain;
 
       source.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioManager.getMasterOutput());
       source.onended = () => {
+        source.disconnect();
+        gain.disconnect();
         if (previewSourceRef.current === source) {
           previewSourceRef.current = null;
+          releasePreviewSessionRef.current?.();
+          releasePreviewSessionRef.current = null;
           setIsPlayingPreview(false);
         }
       };
@@ -236,6 +250,8 @@ export function SoundboardEditorModal({
       setIsPlayingPreview(true);
       source.start(0, startSec, Math.max(0.05, endSec - startSec));
     } catch {
+      releasePreviewSessionRef.current?.();
+      releasePreviewSessionRef.current = null;
       setIsPlayingPreview(false);
     }
   };
@@ -345,7 +361,7 @@ export function SoundboardEditorModal({
             </button>
             {emojiPickerOpen && (
               <div
-                className="absolute left-0 top-full mt-2 z-[250] rounded-xl overflow-hidden shadow-2xl border border-border-soft"
+                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-full sm:translate-x-0 sm:translate-y-0 sm:mt-2 z-[250] max-w-[calc(100vw-2rem)] overflow-x-auto rounded-xl shadow-2xl border border-border-soft"
                 onClick={(e) => e.stopPropagation()}
               >
                 <EmojiPicker
@@ -422,7 +438,7 @@ export function SoundboardEditorModal({
           <input
             ref={fileInputRef}
             type="file"
-            accept="audio/*,.wav,.mp3,.ogg,.webm,.m4a"
+            accept="audio/*,.wav,.mp3,.ogg,.webm,.m4a,.aac,.flac,.opus"
             className="hidden"
             onChange={(e) => void handleFileChange(e.target.files?.[0] ?? null)}
           />

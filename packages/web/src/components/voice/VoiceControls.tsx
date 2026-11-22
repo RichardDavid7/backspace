@@ -7,6 +7,8 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { ConnectionInfoPopover } from './ConnectionInfoPopover';
 import { SoundboardPopover } from './SoundboardPopover';
+import { usePortalContainer } from '../../hooks/usePortalContainer';
+import { layoutPixels, layoutRect } from '../../platform/interfaceScale';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { handleCameraAction, handleDisconnectAction, handleScreenShareAction, reconnectVoice } from '../../utils/voiceActions';
 
@@ -57,6 +59,8 @@ export function VoiceControls() {
     if (!currentVoiceChannelId && !activeDmCall) setShowSoundboard(false);
   }, [currentVoiceChannelId, activeDmCall]);
 
+  const portalContainer = usePortalContainer();
+
   useEffect(() => {
     if (!showSoundboard) {
       setSoundboardAnchor(null);
@@ -65,14 +69,16 @@ export function VoiceControls() {
     const updateAnchor = () => {
       const btn = soundboardBtnRef.current;
       if (!btn) return;
-      const rect = btn.getBoundingClientRect();
+      const rect = layoutRect(btn.getBoundingClientRect());
+      const vw = layoutPixels(window.innerWidth);
+      const vh = layoutPixels(window.innerHeight);
       setSoundboardAnchor({
-        left: Math.max(8, Math.min(rect.left, window.innerWidth - 336)),
-        bottom: window.innerHeight - rect.top + 8,
+        left: Math.max(8, Math.min(rect.left, vw - 336)),
+        bottom: vh - rect.top + 8,
       });
     };
     updateAnchor();
-    const onMouseDown = (e: MouseEvent) => {
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
       if (soundboardBtnRef.current?.contains(target)) return;
       if (soundboardPopoverRef.current?.contains(target)) return;
@@ -82,11 +88,13 @@ export function VoiceControls() {
       if (e.key === 'Escape') setShowSoundboard(false);
     };
     window.addEventListener('resize', updateAnchor);
-    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown, { passive: true });
     document.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('resize', updateAnchor);
-      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [showSoundboard]);
@@ -328,7 +336,7 @@ export function VoiceControls() {
               onClose={() => setShowSoundboard(false)}
             />
           </div>,
-          document.body,
+          portalContainer,
         )}
 
         {/* Screen share menu — quality settings + stop, anchored to the share button */}
