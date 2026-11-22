@@ -483,32 +483,29 @@ export function useLiveKit() {
   const audioStereo = useVoiceStore((s) => s.audioStereo);
   const audioBitrateAuto = useVoiceStore((s) => s.audioBitrateAuto);
   const audioBitrate = useVoiceStore((s) => s.audioBitrate);
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const activeChannelAudioBitrate = useSpaceStore((s) => {
-    const cvId = useVoiceStore.getState().currentVoiceChannelId;
-    const ch = cvId ? s.channels.find((c) => c.id === cvId) : undefined;
+    const ch = currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined;
     const cat = ch?.categoryId ? s.categories.find((c) => c.id === ch.categoryId) : undefined;
     const sp = ch?.spaceId ? s.spaces.find((x) => x.id === ch.spaceId) : undefined;
     const hasAny = ch?.audioBitrateKbps != null || cat?.audioBitrateKbps != null || sp?.audioBitrateKbps != null;
     return hasAny ? resolveAudioPolicyHierarchy({ space: sp, category: cat, channel: ch }).defaultBitrateKbps : null;
   });
   const activeChannelMaxAudioBitrate = useSpaceStore((s) => {
-    const cvId = useVoiceStore.getState().currentVoiceChannelId;
-    const ch = cvId ? s.channels.find((c) => c.id === cvId) : undefined;
+    const ch = currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined;
     const cat = ch?.categoryId ? s.categories.find((c) => c.id === ch.categoryId) : undefined;
     const sp = ch?.spaceId ? s.spaces.find((x) => x.id === ch.spaceId) : undefined;
     const hasAny = ch?.maxAudioBitrateKbps != null || cat?.maxAudioBitrateKbps != null || sp?.maxAudioBitrateKbps != null;
     return hasAny ? resolveAudioPolicyHierarchy({ space: sp, category: cat, channel: ch }).maxBitrateKbps : null;
   });
   const activeChannelAllowMusic = useSpaceStore((s) => {
-    const cvId = useVoiceStore.getState().currentVoiceChannelId;
-    const ch = cvId ? s.channels.find((c) => c.id === cvId) : undefined;
+    const ch = currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined;
     const cat = ch?.categoryId ? s.categories.find((c) => c.id === ch.categoryId) : undefined;
     const sp = ch?.spaceId ? s.spaces.find((x) => x.id === ch.spaceId) : undefined;
     return resolveAudioPolicyHierarchy({ space: sp, category: cat, channel: ch }).allowMusicMode ? null : false;
   });
   const activeChannelAllowStereo = useSpaceStore((s) => {
-    const cvId = useVoiceStore.getState().currentVoiceChannelId;
-    const ch = cvId ? s.channels.find((c) => c.id === cvId) : undefined;
+    const ch = currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined;
     const cat = ch?.categoryId ? s.categories.find((c) => c.id === ch.categoryId) : undefined;
     const sp = ch?.spaceId ? s.spaces.find((x) => x.id === ch.spaceId) : undefined;
     return resolveAudioPolicyHierarchy({ space: sp, category: cat, channel: ch }).allowStereoAudio ? null : false;

@@ -172,6 +172,16 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
   const currentChannel = useSpaceStore((s) =>
     currentVoiceChannelId ? s.channels.find((c) => c.id === currentVoiceChannelId) : undefined,
   );
+  const currentCategory = useSpaceStore((s) =>
+    currentChannel?.categoryId
+      ? s.categories.find((cat) => cat.id === currentChannel.categoryId)
+      : undefined,
+  );
+  const currentSpace = useSpaceStore((s) =>
+    currentChannel?.spaceId
+      ? s.spaces.find((sp) => sp.id === currentChannel.spaceId)
+      : undefined,
+  );
   const channelOrigin = currentVoiceChannelId ? getChannelOrigin(currentVoiceChannelId) : '';
   const limits = useSettingsStore((s) => selectStreamingLimits(s, channelOrigin) ?? s.streamingLimits);
   const effectiveLocalAudio = resolveEffectiveAudioConfig({
@@ -179,6 +189,14 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
     audioStereo,
     audioBitrateAuto,
     audioBitrate,
+    spaceAudioBitrateKbps: currentSpace?.audioBitrateKbps ?? null,
+    spaceMaxAudioBitrateKbps: currentSpace?.maxAudioBitrateKbps ?? null,
+    spaceAllowMusicMode: currentSpace?.allowMusicMode ?? null,
+    spaceAllowStereoAudio: currentSpace?.allowStereoAudio ?? null,
+    categoryAudioBitrateKbps: currentCategory?.audioBitrateKbps ?? null,
+    categoryMaxAudioBitrateKbps: currentCategory?.maxAudioBitrateKbps ?? null,
+    categoryAllowMusicMode: currentCategory?.allowMusicMode ?? null,
+    categoryAllowStereoAudio: currentCategory?.allowStereoAudio ?? null,
     channelAudioBitrateKbps: currentChannel?.audioBitrateKbps ?? null,
     channelMaxAudioBitrateKbps: currentChannel?.maxAudioBitrateKbps ?? null,
     channelAllowMusicMode: currentChannel?.allowMusicMode ?? null,

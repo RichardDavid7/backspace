@@ -275,9 +275,9 @@ export function VoicePanel() {
           {t('settings:voice.processing.sectionTitle')}
         </div>
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">
-          {audioMode === 'music' ? (
+          {musicAllowed && audioMode === 'music' ? (
             <p className="text-xs text-accent-amber mb-2">{t('settings:voice.opus.bypassNoticeMusic')}</p>
-          ) : audioStereo ? (
+          ) : stereoAllowed && audioStereo ? (
             <p className="text-xs text-txt-tertiary mb-2">{t('settings:voice.opus.bypassNoticeStereo')}</p>
           ) : null}
           <div className="flex items-center justify-between py-2">
