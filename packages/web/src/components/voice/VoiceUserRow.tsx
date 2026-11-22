@@ -70,7 +70,7 @@ export function VoiceUserRow({
       <div className="flex items-center gap-1 flex-shrink-0">
         {activeSoundboard && (
           <span
-            className="inline-flex items-center px-1 rounded bg-surface-elevated text-[11px] leading-[15px]"
+            className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-surface-elevated text-[16px] leading-none shadow-sm"
             title={activeSoundboard.name}
           >
             <span>{activeSoundboard.emoji}</span>
