@@ -15,7 +15,7 @@ import {
   TrackEvent,
 } from 'livekit-client';
 import { getApiForOrigin, getChannelOrigin, getMyUserIdForOrigin, useSpaceStore } from '../stores/spaceStore';
-import { useSettingsStore } from '../stores/settingsStore';
+import { selectStreamingLimits, useSettingsStore } from '../stores/settingsStore';
 import { homeIdentityOf } from '../utils/identity';
 import { refreshStreamHostLimits, useStreamHostLimits } from '../utils/streamHostLimits';
 import { wsSend } from './useWebSocket';
@@ -42,7 +42,7 @@ import {
   syncScreenShareAudio,
 } from '../utils/screenShare';
 import { encodeStreamWatch, parseShareSignal, parseStreamWatch, streamWatchFor, streamWatchKey } from '../utils/streamWatchProtocol';
-import { decodeSoundboardPlay } from '../utils/soundboardProtocol';
+import { decodeSoundboardPlay, isSafeSoundboardFileUrl } from '../utils/soundboardProtocol';
 import { StreamRepublishTracker } from '../utils/streamRepublish';
 import { StreamResumeMemory, type RememberedStream } from '../utils/streamResume';
 import { getMediaStreamTrack } from '../utils/livekitInternals';
@@ -495,12 +495,14 @@ export function useLiveKit() {
       }
       const sb = decodeSoundboardPlay(payload);
       if (sb) {
-        const limits = useSettingsStore.getState().streamingLimits;
+        if (!isSafeSoundboardFileUrl(sb.fileUrl)) return;
+        const vs = useVoiceStore.getState();
+        const origin = voiceSessionOrigin(vs);
+        const limits = selectStreamingLimits(useSettingsStore.getState(), origin);
         if (limits?.soundboardEnabled === false) return;
         // Server-signed token attribute: `sb=0` means the sender lacks USE_SOUNDBOARD.
         if (participant?.attributes?.sb === '0') return;
         const senderUserId = resolveParticipantUserId(participant.identity);
-        const vs = useVoiceStore.getState();
         if (vs.soundboardMuted || vs.soundboardMutedUserIds.has(senderUserId)) {
           return;
         }
@@ -513,10 +515,7 @@ export function useLiveKit() {
           return;
         }
         vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
-        const origin = voiceSessionOrigin(vs);
-        const resolvedUrl = sb.fileUrl.startsWith('/') && origin
-          ? `${origin}${sb.fileUrl}`
-          : sb.fileUrl;
+        const resolvedUrl = origin ? `${origin}${sb.fileUrl}` : sb.fileUrl;
         void AudioManager.getInstance()
           .playSoundUrl(resolvedUrl, { volume: (vs.soundboardVolume / 100) * 0.8 })
           .then((res) => {
