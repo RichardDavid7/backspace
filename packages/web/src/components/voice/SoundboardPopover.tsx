@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SoundboardScopeType, SoundboardSound } from '@backspace/shared';
 import { useVoiceStore } from '../../stores/voiceStore';
@@ -110,6 +110,13 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
         .catch(() => {
           finishSoundboardClip(sound.id);
         });
+    } else {
+      // Local audio is muted/deafened so playSoundUrl won't fire `ended`; release
+      // the slot after a short cooldown instead of blocking for up to 15s.
+      const releaseMs = Math.max(400, Math.min(sound.durationMs > 0 ? sound.durationMs : 1500, 3000));
+      setTimeout(() => {
+        finishSoundboardClip(sound.id);
+      }, releaseMs);
     }
 
     const room = getActiveRoom();
@@ -126,19 +133,9 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     }
   };
 
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressFiredRef = useRef(false);
-
-  const clearLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  useEffect(() => clearLongPress, []);
-
-  const startLocalPreview = (sound: SoundboardSound) => {
+  const handlePreviewOnly = (e: React.MouseEvent, sound: SoundboardSound) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (previewingId === sound.id) return;
 
     const resolvedUrl = sound.fileUrl.startsWith('/') && origin
@@ -162,22 +159,6 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       });
   };
 
-  const handlePreviewOnly = (e: React.MouseEvent, sound: SoundboardSound) => {
-    e.preventDefault();
-    e.stopPropagation();
-    startLocalPreview(sound);
-  };
-
-  const handleTouchStart = (sound: SoundboardSound) => {
-    clearLongPress();
-    longPressFiredRef.current = false;
-    longPressTimerRef.current = setTimeout(() => {
-      longPressTimerRef.current = null;
-      longPressFiredRef.current = true;
-      startLocalPreview(sound);
-    }, 450);
-  };
-
   const atConcurrencyLimit = activeSoundboardClips.size >= maxConcurrentSounds;
 
   const renderSoundGrid = (items: SoundboardSound[]) => (
@@ -191,18 +172,11 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
             key={sound.id}
             type="button"
             disabled={isPlaying || isBlocked}
-            onClick={() => {
-              if (longPressFiredRef.current) {
-                longPressFiredRef.current = false;
-                return;
-              }
-              void handlePlay(sound);
-            }}
+            onClick={() => void handlePlay(sound)}
+            // On touch devices, ContextMenuRenderer's useGlobalLongPress synthesizes
+            // `contextmenu` after 500ms with a 10px movement tolerance, so delegating
+            // to onContextMenu avoids double-firing and 1px touch-move cancellations.
             onContextMenu={(e) => handlePreviewOnly(e, sound)}
-            onTouchStart={() => handleTouchStart(sound)}
-            onTouchEnd={clearLongPress}
-            onTouchMove={clearLongPress}
-            onTouchCancel={clearLongPress}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors ${
               isPlaying
                 ? 'bg-accent-primary/20 border-accent-primary/60 text-txt-primary cursor-default'

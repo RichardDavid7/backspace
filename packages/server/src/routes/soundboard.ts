@@ -16,7 +16,7 @@ const MAX_SOUNDBOARD_BYTES = 5 * 1024 * 1024; // 5 MB
 const MAX_SOUNDBOARD_NAME = 40;
 const MAX_SOUNDBOARD_EMOJI = 16;
 const MAX_SOUNDBOARD_FOLDER = 32;
-const SAFE_FILE_NAME = /^[a-zA-Z0-9_-]+\.(wav|mp3|ogg|webm|m4a)$/;
+const SAFE_FILE_NAME = /^[a-zA-Z0-9_-]+\.(wav|mp3|ogg|webm|m4a|aac|flac|opus)$/;
 
 const MIME_TO_EXT: Record<string, string> = {
   'audio/wav': 'wav',
@@ -25,17 +25,27 @@ const MIME_TO_EXT: Record<string, string> = {
   'audio/mpeg': 'mp3',
   'audio/mp3': 'mp3',
   'audio/ogg': 'ogg',
+  'audio/opus': 'opus',
   'audio/webm': 'webm',
+  'video/webm': 'webm',
   'audio/mp4': 'm4a',
   'audio/x-m4a': 'm4a',
+  'video/mp4': 'm4a',
+  'audio/aac': 'aac',
+  'audio/x-aac': 'aac',
+  'audio/flac': 'flac',
+  'audio/x-flac': 'flac',
 };
 
 const EXT_TO_MIME: Record<string, string> = {
   wav: 'audio/wav',
   mp3: 'audio/mpeg',
   ogg: 'audio/ogg',
+  opus: 'audio/opus',
   webm: 'audio/webm',
   m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  flac: 'audio/flac',
 };
 
 function soundboardDir(): string {

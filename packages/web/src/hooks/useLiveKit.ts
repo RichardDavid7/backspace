@@ -504,12 +504,15 @@ export function useLiveKit() {
         if (vs.soundboardMuted || vs.soundboardMutedUserIds.has(senderUserId)) {
           return;
         }
+        if (vs.isDeafened) {
+          vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
+          return;
+        }
         const maxConcurrent = limits?.maxConcurrentSoundboardSounds ?? 3;
         if (!vs.tryStartSoundboardClip(sb.soundId, sb.durationMs, maxConcurrent)) {
           return;
         }
         vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
-        if (vs.isDeafened) return;
         const origin = voiceSessionOrigin(vs);
         const resolvedUrl = sb.fileUrl.startsWith('/') && origin
           ? `${origin}${sb.fileUrl}`
