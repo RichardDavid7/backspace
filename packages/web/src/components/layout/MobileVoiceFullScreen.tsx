@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../stores/uiStore';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
-import { useSettingsStore } from '../../stores/settingsStore';
+import { selectStreamingLimits, useSettingsStore } from '../../stores/settingsStore';
+import { voiceSessionOrigin } from '../../utils/dmCall';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { useActiveDmCall } from '../../hooks/useActiveDmCall';
 import {
@@ -57,7 +58,8 @@ export function MobileVoiceFullScreen() {
   const spaces = useSpaceStore((s) => s.spaces);
   const channelToSpaceMap = useSpaceStore((s) => s.channelToSpaceMap);
   const channelPerms = useSpaceStore((s) => currentVoiceChannelId ? s.channelPermissions.get(currentVoiceChannelId) : undefined);
-  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const voiceOrigin = useVoiceStore(voiceSessionOrigin);
+  const soundboardEnabled = useSettingsStore((s) => selectStreamingLimits(s, voiceOrigin)?.soundboardEnabled ?? true);
   const canUseSoundboard = soundboardEnabled && (!currentVoiceChannelId || hasPermissionBit(channelPerms, PermissionBits.USE_SOUNDBOARD));
 
   const { title: dmCallTitle } = useActiveDmCall();
@@ -255,8 +257,18 @@ export function MobileVoiceFullScreen() {
     };
   }, []);
 
-  if (!currentVoiceChannelId && !activeDmCall) {
-    popMobileScreen();
+  const hasActiveCall = Boolean(currentVoiceChannelId || activeDmCall);
+  const hasPoppedRef = useRef(false);
+
+  // Pop this screen via an effect (never during render) if the call ends externally.
+  useEffect(() => {
+    if (!hasActiveCall && !hasPoppedRef.current) {
+      hasPoppedRef.current = true;
+      popMobileScreen();
+    }
+  }, [hasActiveCall, popMobileScreen]);
+
+  if (!hasActiveCall) {
     return null;
   }
 
@@ -279,7 +291,10 @@ export function MobileVoiceFullScreen() {
 
   const handleDisconnect = () => {
     handleDisconnectAction();
-    popMobileScreen();
+    if (!hasPoppedRef.current) {
+      hasPoppedRef.current = true;
+      popMobileScreen();
+    }
   };
 
   return (

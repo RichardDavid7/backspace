@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../stores/uiStore';
 import { selectMyChosenStatus, useAuthStore } from '../../stores/authStore';
 import { Avatar } from '../ui/Avatar';
-import { StatusPickerPopover, useStatusRevertBootstrap } from '../ui/StatusPickerPopover';
+import { StatusPickerPopover } from '../ui/StatusPickerPopover';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { parseFederatedUsername } from '../../utils/identity';
 import { replaceEmojiShortcodes, useEmojiShortcodeNames } from '../../utils/emojiShortcodes';
@@ -34,7 +34,6 @@ export function MobileYouScreen() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const statusBtnRef = useRef<HTMLButtonElement>(null);
-  useStatusRevertBootstrap();
   const updateBadge = useInstanceUpdateBadge();
   const hubUpdate = useHubUpdateState();
 

@@ -13,6 +13,17 @@ export interface SoundboardPlayMessage {
   durationMs: number;
 }
 
+const SAFE_SOUNDBOARD_FILE_URL = /^\/api\/soundboard\/files\/[a-zA-Z0-9_-]+\.(wav|mp3|ogg|webm|m4a|aac|flac|opus)$/;
+
+/**
+ * Only instance-relative soundboard file paths matching the server's safe file
+ * naming scheme are allowed. Rejects arbitrary external URLs, protocol-relative
+ * URLs, path traversal, and query/fragment suffixes from untrusted DataChannel peers.
+ */
+export function isSafeSoundboardFileUrl(fileUrl: string): boolean {
+  return SAFE_SOUNDBOARD_FILE_URL.test(fileUrl);
+}
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -33,6 +44,9 @@ export function decodeSoundboardPlay(payload: Uint8Array): SoundboardPlayMessage
       typeof obj.emoji !== 'string' ||
       typeof obj.senderUserId !== 'string'
     ) {
+      return null;
+    }
+    if (!isSafeSoundboardFileUrl(obj.fileUrl)) {
       return null;
     }
     const durationMs = typeof obj.durationMs === 'number' && Number.isFinite(obj.durationMs)

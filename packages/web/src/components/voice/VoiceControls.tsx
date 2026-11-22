@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
-import { useSettingsStore } from '../../stores/settingsStore';
+import { selectStreamingLimits, useSettingsStore } from '../../stores/settingsStore';
+import { voiceSessionOrigin } from '../../utils/dmCall';
 import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { ConnectionInfoPopover } from './ConnectionInfoPopover';
 import { SoundboardPopover } from './SoundboardPopover';
@@ -46,7 +47,8 @@ export function VoiceControls() {
   const isDmCall = !!activeDmCall;
   const canSpeak = isDmCall || hasPermissionBit(channelPerms, PermissionBits.SPEAK);
   const canStream = isDmCall || hasPermissionBit(channelPerms, PermissionBits.STREAM);
-  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const voiceOrigin = useVoiceStore(voiceSessionOrigin);
+  const soundboardEnabled = useSettingsStore((s) => selectStreamingLimits(s, voiceOrigin)?.soundboardEnabled ?? true);
   const canUseSoundboard = soundboardEnabled && (isDmCall || hasPermissionBit(channelPerms, PermissionBits.USE_SOUNDBOARD));
 
   // A share that ends outside the menu (OS "Stop sharing" bar, track loss,

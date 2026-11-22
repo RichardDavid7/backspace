@@ -4,7 +4,8 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from '../../stores/spaceStore';
-import { useSettingsStore } from '../../stores/settingsStore';
+import { selectStreamingLimits, useSettingsStore } from '../../stores/settingsStore';
+import { voiceSessionOrigin } from '../../utils/dmCall';
 import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { SoundboardPopover } from './SoundboardPopover';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
@@ -46,7 +47,8 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
   const isDmCall = !!activeDmCall;
   const canSpeak = isDmCall || hasPermissionBit(channelPerms, PermissionBits.SPEAK);
   const canStream = isDmCall || hasPermissionBit(channelPerms, PermissionBits.STREAM);
-  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const voiceOrigin = useVoiceStore(voiceSessionOrigin);
+  const soundboardEnabled = useSettingsStore((s) => selectStreamingLimits(s, voiceOrigin)?.soundboardEnabled ?? true);
   const canUseSoundboard = soundboardEnabled && (isDmCall || hasPermissionBit(channelPerms, PermissionBits.USE_SOUNDBOARD));
   // The screen-share button is the single entry point to stream settings:
   // idle → opens the OS/Electron source picker; live → opens the settings

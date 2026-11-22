@@ -5,7 +5,7 @@ import { describeError } from '../../i18n/errors';
 import { Modal } from '../ui/Modal';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
-import { useSettingsStore } from '../../stores/settingsStore';
+import { selectStreamingLimits, useSettingsStore } from '../../stores/settingsStore';
 import { Avatar } from '../ui/Avatar';
 import { Toggle } from '../ui/Toggle';
 import { api } from '../../api/client';
@@ -627,8 +627,23 @@ export function SpaceSettingsModal() {
   const canManageRoles = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_ROLES);
   const canBanMembers = hasPermissionBit(mySpacePerms, PermissionBits.BAN_MEMBERS);
   const canManageSoundboard = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SOUNDBOARD);
-  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const soundboardEnabled = useSettingsStore((s) => selectStreamingLimits(s, spaceOrigin)?.soundboardEnabled ?? true);
   const showSoundboardTab = soundboardEnabled && canManageSoundboard;
+
+  // Ensure federated space limits are fetched so soundboardEnabled reflects the
+  // remote host instance rather than defaulting blindly or reading home's limits.
+  useEffect(() => {
+    if (!isOpen || !spaceOrigin) return;
+    if (!selectStreamingLimits(useSettingsStore.getState(), spaceOrigin)) {
+      void useSettingsStore.getState().fetchStreamingLimitsFor(spaceOrigin);
+    }
+  }, [isOpen, spaceOrigin]);
+
+  useEffect(() => {
+    if (tab === 'soundboard' && !showSoundboardTab) {
+      setTab('overview');
+    }
+  }, [tab, showSoundboardTab]);
 
   // Reset tab and mobile view when modal opens. A caller may name the tab
   // to open on (`openModal('spaceSettings', { tab: 'discovery' })`); a tab
