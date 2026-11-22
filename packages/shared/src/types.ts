@@ -140,6 +140,14 @@ export interface Space {
   visibility: SpaceVisibility;
   directoryListed: boolean;
   description: string | null;
+  /** Optional per-space default Opus bitrate in kbps (`null` = inherit from instance). */
+  audioBitrateKbps?: number | null;
+  /** Optional per-space maximum Opus bitrate cap in kbps (`null` = inherit from instance). */
+  maxAudioBitrateKbps?: number | null;
+  /** Optional per-space Opus Music mode policy (`null` = inherit from instance). */
+  allowMusicMode?: boolean | null;
+  /** Optional per-space Opus Stereo policy (`null` = inherit from instance). */
+  allowStereoAudio?: boolean | null;
   createdAt: number;
 }
 
@@ -287,6 +295,14 @@ export interface ChannelCategory {
   name: string;
   position: number;
   isPrivate?: boolean;
+  /** Optional per-category default Opus bitrate in kbps (`null` = inherit from space/instance). */
+  audioBitrateKbps?: number | null;
+  /** Optional per-category maximum Opus bitrate cap in kbps (`null` = inherit from space/instance). */
+  maxAudioBitrateKbps?: number | null;
+  /** Optional per-category Opus Music mode policy (`null` = inherit from space/instance). */
+  allowMusicMode?: boolean | null;
+  /** Optional per-category Opus Stereo policy (`null` = inherit from space/instance). */
+  allowStereoAudio?: boolean | null;
   createdAt: number;
 }
 
@@ -902,6 +918,19 @@ export interface UpdateChannelRequest {
   allowStereoAudio?: boolean | null;
 }
 
+export interface UpdateCategoryRequest {
+  name?: string;
+  position?: number;
+  /** `null` inherits space/instance default bitrate. */
+  audioBitrateKbps?: number | null;
+  /** `null` inherits space/instance maximum bitrate. */
+  maxAudioBitrateKbps?: number | null;
+  /** `null` inherits space/instance music mode policy. */
+  allowMusicMode?: boolean | null;
+  /** `null` inherits space/instance stereo policy. */
+  allowStereoAudio?: boolean | null;
+}
+
 export interface UpdateSpaceRequest {
   ownerTitle?: string | null;
   name?: string;
@@ -911,6 +940,14 @@ export interface UpdateSpaceRequest {
   visibility?: SpaceVisibility;
   directoryListed?: boolean;
   description?: string;
+  /** `null` inherits instance default bitrate. */
+  audioBitrateKbps?: number | null;
+  /** `null` inherits instance maximum bitrate. */
+  maxAudioBitrateKbps?: number | null;
+  /** `null` inherits instance music mode policy. */
+  allowMusicMode?: boolean | null;
+  /** `null` inherits instance stereo policy. */
+  allowStereoAudio?: boolean | null;
 }
 
 export interface UpdateUserRequest {

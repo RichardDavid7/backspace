@@ -139,4 +139,100 @@ describe('Opus audio publish options & store clamping', () => {
       audioBitrate: 64,
     });
   });
+
+  it('enforces full 5-level precedence: Instance → Space → Category → Channel → User', () => {
+    // 1. Default bitrate priority: Channel > Category > Space > Instance
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'voice',
+        audioStereo: false,
+        audioBitrateAuto: true,
+        audioBitrate: 32,
+        instanceDefaultAudioBitrateKbps: 64,
+        spaceAudioBitrateKbps: 96,
+        categoryAudioBitrateKbps: 128,
+        channelAudioBitrateKbps: 192,
+        instanceMaxAudioBitrateKbps: 512,
+      }).audioBitrate,
+    ).toBe(192);
+
+    // Channel null → falls back to Category
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'voice',
+        audioStereo: false,
+        audioBitrateAuto: true,
+        audioBitrate: 32,
+        instanceDefaultAudioBitrateKbps: 64,
+        spaceAudioBitrateKbps: 96,
+        categoryAudioBitrateKbps: 128,
+        channelAudioBitrateKbps: null,
+        instanceMaxAudioBitrateKbps: 512,
+      }).audioBitrate,
+    ).toBe(128);
+
+    // Channel & Category null → falls back to Space
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'voice',
+        audioStereo: false,
+        audioBitrateAuto: true,
+        audioBitrate: 32,
+        instanceDefaultAudioBitrateKbps: 64,
+        spaceAudioBitrateKbps: 96,
+        categoryAudioBitrateKbps: null,
+        channelAudioBitrateKbps: null,
+        instanceMaxAudioBitrateKbps: 512,
+      }).audioBitrate,
+    ).toBe(96);
+
+    // 2. Max cap is strict intersection (child cannot exceed parent cap)
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'music',
+        audioStereo: true,
+        audioBitrateAuto: false,
+        audioBitrate: 320,
+        instanceMaxAudioBitrateKbps: 256,
+        spaceMaxAudioBitrateKbps: 192,
+        categoryMaxAudioBitrateKbps: 128,
+        channelMaxAudioBitrateKbps: 256, // tries to exceed category's 128 → clamped to 128
+      }).audioBitrate,
+    ).toBe(128);
+
+    // Space cap clamps category default
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'voice',
+        audioStereo: false,
+        audioBitrateAuto: true,
+        audioBitrate: 64,
+        instanceMaxAudioBitrateKbps: 512,
+        spaceMaxAudioBitrateKbps: 96,
+        categoryAudioBitrateKbps: 160,
+      }).audioBitrate,
+    ).toBe(96);
+
+    // 3. Music/Stereo disabled at Space or Category cannot be re-enabled by Channel
+    expect(
+      resolveEffectiveAudioConfig({
+        audioMode: 'music',
+        audioStereo: true,
+        audioBitrateAuto: true,
+        audioBitrate: 128,
+        instanceAllowMusicMode: true,
+        spaceAllowMusicMode: false,
+        categoryAllowMusicMode: true,
+        channelAllowMusicMode: true,
+        instanceAllowStereoAudio: true,
+        spaceAllowStereoAudio: true,
+        categoryAllowStereoAudio: false,
+        channelAllowStereoAudio: true,
+      }),
+    ).toEqual({
+      audioMode: 'voice',
+      audioStereo: false,
+      audioBitrate: 64,
+    });
+  });
 });

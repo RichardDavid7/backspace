@@ -76,6 +76,10 @@ export const spaces = sqliteTable('spaces', {
   visibility: text('visibility').default('private'),
   directoryListed: integer('directory_listed').notNull().default(0),
   description: text('description'),
+  audioBitrateKbps: integer('audio_bitrate_kbps'),
+  maxAudioBitrateKbps: integer('max_audio_bitrate_kbps'),
+  allowMusicMode: integer('allow_music_mode'),
+  allowStereoAudio: integer('allow_stereo_audio'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -94,6 +98,10 @@ export const channelCategories = sqliteTable('channel_categories', {
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   position: integer('position').default(0),
+  audioBitrateKbps: integer('audio_bitrate_kbps'),
+  maxAudioBitrateKbps: integer('max_audio_bitrate_kbps'),
+  allowMusicMode: integer('allow_music_mode'),
+  allowStereoAudio: integer('allow_stereo_audio'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_channel_categories_space_id').on(table.spaceId),

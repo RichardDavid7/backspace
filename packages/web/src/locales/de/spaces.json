@@ -71,24 +71,28 @@
       "voiceAudio": {
         "sectionTitle": "Sprachaudio (Opus)",
         "autoBitrate": {
-          "label": "Instanz-Standard-Bitrate verwenden",
-          "description": "Aktuell {{kbps}} kbps. Deaktivieren, um eine eigene Bitrate für diesen Kanal festzulegen."
+          "label": "Geerbte Standard-Bitrate verwenden",
+          "description": "Aktuell {{kbps}} kbps (von der Instanz). Deaktivieren, um eine eigene Standard-Bitrate festzulegen.",
+          "descriptionInherited": "Aktuell {{kbps}} kbps (geerbt). Deaktivieren, um eine eigene Standard-Bitrate festzulegen."
         },
-        "bitrateLabel": "Kanal-Bitrate",
+        "bitrateLabel": "Standard-Bitrate",
         "allowMusicMode": {
           "label": "Opus-Musikmodus erlauben",
-          "description": "Erlaubt Teilnehmern in diesem Kanal den Musikmodus zu nutzen.",
-          "disabledByInstance": "Der Musikmodus ist auf Instanzebene deaktiviert."
+          "description": "Erlaubt Teilnehmern, den Opus-Musikmodus zu nutzen.",
+          "disabledByInstance": "Der Musikmodus ist auf Instanzebene deaktiviert.",
+          "disabledByParent": "Der Musikmodus ist auf einer übergeordneten Ebene (Instanz, Space oder Kategorie) deaktiviert."
         },
         "autoMaxBitrate": {
-          "label": "Instanz-Maximalbitrate verwenden",
-          "description": "Derzeit {{kbps}} kbps. Deaktivieren, um eine niedrigere maximale Bitrate für diesen Sprachkanal festzulegen."
+          "label": "Geerbte Maximalbitrate verwenden",
+          "description": "Derzeit {{kbps}} kbps (von der Instanz). Deaktivieren, um eine niedrigere Obergrenze festzulegen.",
+          "descriptionInherited": "Derzeit {{kbps}} kbps (geerbt). Deaktivieren, um eine niedrigere Obergrenze festzulegen."
         },
-        "maxBitrateLabel": "Maximale Kanal-Bitrate",
+        "maxBitrateLabel": "Maximale Bitrate",
         "allowStereoAudio": {
           "label": "Stereo-Audio erlauben",
-          "description": "Erlaubt Teilnehmern dieses Kanals, 2-Kanal-Stereo-Opus-Audio zu senden.",
-          "disabledByInstance": "Stereo-Audio ist in den Instanzeinstellungen deaktiviert."
+          "description": "Erlaubt Teilnehmern, 2-Kanal-Stereo-Opus-Audio zu senden.",
+          "disabledByInstance": "Stereo-Audio ist in den Instanzeinstellungen deaktiviert.",
+          "disabledByParent": "Stereo-Audio ist auf einer übergeordneten Ebene (Instanz, Space oder Kategorie) deaktiviert."
         }
       }
     },
@@ -294,7 +298,8 @@
         "overview": "Übersicht",
         "discovery": "Entdecken",
         "roles": "Rollen",
-        "bans": "Sperren"
+        "bans": "Sperren",
+        "audio": "Audio"
       }
     },
     "discardChanges": "Verwerfen",
@@ -390,6 +395,10 @@
       "banFailed": "Mitglied konnte nicht gesperrt werden",
       "rolesAboveYou": "Rollen auf oder über deiner höchsten Rolle sind gesperrt.",
       "rolesUnheld": "Rollen mit Berechtigungen, die du nicht hast, kannst du nicht vergeben."
+    },
+    "audio": {
+      "title": "Sprachaudio (Opus)",
+      "description": "Standard-Sprachbitrate, Obergrenze und Opus-Funktionen für diesen Space. Kategorien und Sprachkanäle erben diese Grenzen und können sie weiter einschränken."
     }
   },
   "bans": {

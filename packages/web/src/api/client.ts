@@ -21,6 +21,7 @@ import type {
   UpdateSpaceRequest,
   CreateChannelRequest,
   UpdateChannelRequest,
+  UpdateCategoryRequest,
   CreateMessageRequest,
   UpdateMessageRequest,
   UpdateUserRequest,
@@ -288,7 +289,7 @@ export class BackspaceApiClient {
 
   readonly categories: {
     create: (spaceId: string, name: string) => Promise<ChannelCategory>;
-    update: (id: string, data: { name?: string; position?: number }) => Promise<ChannelCategory>;
+    update: (id: string, data: UpdateCategoryRequest) => Promise<ChannelCategory>;
     delete: (id: string) => Promise<{ success: boolean }>;
     getOverrides: (categoryId: string) => Promise<{ categoryId: string; targetType: string; targetId: string; allow: string; deny: string; version?: string }[]>;
     putOverride: (categoryId: string, data: OverrideWriteBody) => Promise<{ success: boolean; version?: string }>;
@@ -662,7 +663,7 @@ export class BackspaceApiClient {
     this.categories = {
       create: (spaceId: string, name: string) =>
         request<ChannelCategory>('POST', `/spaces/${spaceId}/categories`, { name }),
-      update: (id: string, data: { name?: string; position?: number }) =>
+      update: (id: string, data: UpdateCategoryRequest) =>
         request<ChannelCategory>('PATCH', `/categories/${id}`, data),
       delete: (id: string) =>
         request<{ success: boolean }>('DELETE', `/categories/${id}`),

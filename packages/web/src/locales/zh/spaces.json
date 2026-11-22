@@ -71,24 +71,28 @@
       "voiceAudio": {
         "sectionTitle": "语音音频 (Opus)",
         "autoBitrate": {
-          "label": "使用实例默认比特率",
-          "description": "当前为 {{kbps}} kbps。关闭后可为此语音频道单独设置比特率。"
+          "label": "使用继承的默认比特率",
+          "description": "当前为 {{kbps}} kbps（来自实例）。关闭后可自定义默认比特率。",
+          "descriptionInherited": "当前为 {{kbps}} kbps（继承）。关闭后可自定义默认比特率。"
         },
-        "bitrateLabel": "频道比特率",
+        "bitrateLabel": "默认比特率",
         "allowMusicMode": {
           "label": "允许 Opus 音乐模式",
-          "description": "允许此频道中的参与者使用音乐模式。",
-          "disabledByInstance": "实例设置已禁用音乐模式。"
+          "description": "允许参与者使用 Opus 音乐模式。",
+          "disabledByInstance": "实例设置已禁用音乐模式。",
+          "disabledByParent": "音乐模式已被更高层级（实例、空间或分类）禁用。"
         },
         "autoMaxBitrate": {
-          "label": "使用实例最大比特率",
-          "description": "当前为 {{kbps}} kbps。关闭后可为此语音频道设置更低的最大比特率上限。"
+          "label": "使用继承的最大比特率",
+          "description": "当前为 {{kbps}} kbps（来自实例）。关闭后可设置更低的最大比特率上限。",
+          "descriptionInherited": "当前为 {{kbps}} kbps（继承）。关闭后可设置更低的最大比特率上限。"
         },
-        "maxBitrateLabel": "频道最大比特率",
+        "maxBitrateLabel": "最大比特率",
         "allowStereoAudio": {
           "label": "允许立体声音频",
-          "description": "允许此频道的参与者传输双声道 Opus 立体声音频。",
-          "disabledByInstance": "实例设置中已禁用立体声音频。"
+          "description": "允许参与者传输双声道 Opus 立体声音频。",
+          "disabledByInstance": "实例设置中已禁用立体声音频。",
+          "disabledByParent": "立体声音频已被更高层级（实例、空间或分类）禁用。"
         }
       }
     },
@@ -291,7 +295,8 @@
         "overview": "概览",
         "discovery": "发现",
         "roles": "身份组",
-        "bans": "封禁名单"
+        "bans": "封禁名单",
+        "audio": "音频"
       }
     },
     "discardChanges": "放弃修改",
@@ -387,6 +392,10 @@
       "banFailed": "封禁成员失败",
       "rolesAboveYou": "与您的最高身份组同级或更高的身份组已锁定。",
       "rolesUnheld": "无法授予拥有您没有的权限的身份组。"
+    },
+    "audio": {
+      "title": "音频 (Opus)",
+      "description": "为此空间设置默认语音比特率、最大上限和 Opus 功能。分类和语音频道会继承这些限制，并可进一步收紧。"
     }
   },
   "bans": {
