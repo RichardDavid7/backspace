@@ -214,7 +214,8 @@ export function SoundboardEditorModal({
     try {
       const audioManager = AudioManager.getInstance();
       releasePreviewSessionRef.current?.();
-      releasePreviewSessionRef.current = audioManager.acquireAudioSession();
+      const amWithSession = audioManager as unknown as { acquireAudioSession?: () => () => void };
+      releasePreviewSessionRef.current = amWithSession.acquireAudioSession?.() ?? null;
       await audioManager.resumeContext();
       const ctx = audioManager.ensureContext();
 

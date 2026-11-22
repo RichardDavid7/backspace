@@ -827,3 +827,20 @@ export const soundboardSounds = sqliteTable('soundboard_sounds', {
 }, (table) => ({
   scopeIdx: index('idx_soundboard_scope').on(table.scopeType, table.scopeId, table.position),
 }));
+
+export const spaceSoundboardSettings = sqliteTable('space_soundboard_settings', {
+  spaceId: text('space_id').primaryKey().references(() => spaces.id, { onDelete: 'cascade' }),
+  soundboardEnabled: integer('soundboard_enabled').notNull().default(1),
+  allowInstanceSounds: integer('allow_instance_sounds').notNull().default(1),
+  maxConcurrentSounds: integer('max_concurrent_sounds'),
+});
+
+export const spaceSoundboardOverrides = sqliteTable('space_soundboard_overrides', {
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  soundId: text('sound_id').notNull().references(() => soundboardSounds.id, { onDelete: 'cascade' }),
+  hidden: integer('hidden').notNull().default(0),
+  volume: integer('volume'),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.spaceId, table.soundId] }),
+  spaceIdx: index('idx_space_soundboard_overrides_space').on(table.spaceId),
+}));

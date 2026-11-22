@@ -516,8 +516,9 @@ export function useLiveKit() {
         }
         vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
         const resolvedUrl = origin ? `${origin}${sb.fileUrl}` : sb.fileUrl;
+        const clipScale = sb.volumeScale ?? 1;
         void AudioManager.getInstance()
-          .playSoundUrl(resolvedUrl, { volume: (vs.soundboardVolume / 100) * 0.8 })
+          .playSoundUrl(resolvedUrl, { volume: (vs.soundboardVolume / 100) * 0.8 * clipScale })
           .then((res) => {
             if (!res) {
               useVoiceStore.getState().finishSoundboardClip(sb.soundId);

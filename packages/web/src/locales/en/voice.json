@@ -330,6 +330,25 @@
     "disabledByInstance": "Custom sounds for spaces are disabled by the instance administrator.",
     "previewHint": "Right-click or hold a sound to preview locally",
     "renameFolder": "Rename folder",
-    "folderRenamed": "Folder renamed"
+    "folderRenamed": "Folder renamed",
+    "disabledInSpace": "Soundboard is disabled in this space.",
+    "spaceOverridesTitle": "Space Overrides",
+    "spaceOverridesDesc": "Customize how Soundboard behaves in this space without affecting other spaces.",
+    "spaceEnabledLabel": "Enable Soundboard in this space",
+    "spaceEnabledDesc": "Allow members to view and trigger sounds in this space's voice channels.",
+    "allowInstanceSoundsLabel": "Show instance default sounds",
+    "allowInstanceSoundsDesc": "Include global instance sounds alongside this space's custom sounds.",
+    "spaceMaxConcurrentLabel": "Max simultaneous sounds",
+    "spaceMaxConcurrentDesc": "Limit how many clips can play at once in this space.",
+    "inheritInstanceLimit": "Inherit instance ({{max}})",
+    "instanceOverridesTitle": "Instance Defaults (Space Overrides)",
+    "instanceOverridesDesc": "Hide specific instance sounds or adjust their volume only in this space.",
+    "instanceSoundsHiddenBySpace": "All instance sounds are currently hidden by the space setting above.",
+    "hiddenBadge": "Hidden",
+    "hiddenCount": "Hidden: {{value}}",
+    "hideInSpace": "Hide in this space",
+    "showInSpace": "Show in this space",
+    "overrideVolume": "Space volume",
+    "resetOverride": "Reset"
   }
 }

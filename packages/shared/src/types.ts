@@ -1211,6 +1211,22 @@ export interface SoundboardSound {
   position: number;
   uploadedBy: string;
   createdAt: number;
+  /** Space-level override: whether this sound is hidden in the requested space. */
+  hiddenInSpace?: boolean;
+  /** Space-level override: per-sound volume percentage (0–100, null = default 100%). */
+  volumeOverride?: number | null;
+}
+
+export interface SpaceSoundboardSettings {
+  soundboardEnabled: boolean;
+  allowInstanceSounds: boolean;
+  maxConcurrentSounds: number | null;
+}
+
+export interface SpaceSoundboardSoundOverride {
+  soundId: string;
+  hidden: boolean;
+  volume: number | null;
 }
 
 export interface SoundboardListResponse {
@@ -1221,6 +1237,10 @@ export interface SoundboardListResponse {
   soundboardEnabled?: boolean;
   maxSoundsPerScope?: number;
   maxConcurrentSounds?: number;
+  /** Instance-level max concurrent cap (useful when configuring space overrides). */
+  instanceMaxConcurrentSounds?: number;
+  /** Space-level soundboard override settings (present when querying with spaceId). */
+  spaceSettings?: SpaceSoundboardSettings;
 }
 
 // ─── Federation Types ──────────────────────────────────────────────────────

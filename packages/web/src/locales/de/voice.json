@@ -330,6 +330,25 @@
     "disabledByInstance": "Eigene Sounds für Spaces sind vom Instanz-Admin deaktiviert.",
     "previewHint": "Rechtsklick oder gedrückt halten für lokale Vorschau",
     "renameFolder": "Ordner umbenennen",
-    "folderRenamed": "Ordner umbenannt"
+    "folderRenamed": "Ordner umbenannt",
+    "disabledInSpace": "Das Soundboard ist in diesem Space deaktiviert.",
+    "spaceOverridesTitle": "Space-Überschreibungen",
+    "spaceOverridesDesc": "Passe das Verhalten des Soundboards für diesen Space an, ohne andere Spaces zu beeinflussen.",
+    "spaceEnabledLabel": "Soundboard in diesem Space aktivieren",
+    "spaceEnabledDesc": "Mitgliedern erlauben, Sounds in den Sprachkanälen dieses Spaces abzuspielen.",
+    "allowInstanceSoundsLabel": "Instanz-Standardsounds anzeigen",
+    "allowInstanceSoundsDesc": "Globale Instanz-Sounds zusammen mit den eigenen Sounds dieses Spaces anzeigen.",
+    "spaceMaxConcurrentLabel": "Max. gleichzeitige Sounds",
+    "spaceMaxConcurrentDesc": "Begrenzt, wie viele Clips in diesem Space gleichzeitig abgespielt werden können.",
+    "inheritInstanceLimit": "Von Instanz übernehmen ({{max}})",
+    "instanceOverridesTitle": "Instanz-Standards (Space-Überschreibungen)",
+    "instanceOverridesDesc": "Blende bestimmte Instanz-Sounds aus oder passe ihre Lautstärke nur für diesen Space an.",
+    "instanceSoundsHiddenBySpace": "Alle Instanz-Sounds sind derzeit durch die obige Space-Einstellung ausgeblendet.",
+    "hiddenBadge": "Ausgeblendet",
+    "hiddenCount": "Ausgeblendet: {{value}}",
+    "hideInSpace": "In diesem Space ausblenden",
+    "showInSpace": "In diesem Space anzeigen",
+    "overrideVolume": "Space-Lautstärke",
+    "resetOverride": "Zurücksetzen"
   }
 }

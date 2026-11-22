@@ -332,6 +332,25 @@
     "disabledByInstance": "Efeitos sonoros personalizados em espaços estão desativados pela instância.",
     "previewHint": "Clique direito ou segure um som para ouvir só para você",
     "renameFolder": "Renomear pasta",
-    "folderRenamed": "Pasta renomeada"
+    "folderRenamed": "Pasta renomeada",
+    "disabledInSpace": "Os efeitos sonoros estão desativados neste espaço.",
+    "spaceOverridesTitle": "Sobreposições do Espaço",
+    "spaceOverridesDesc": "Personalize como os efeitos sonoros funcionam neste espaço sem afetar outros espaços.",
+    "spaceEnabledLabel": "Ativar efeitos sonoros neste espaço",
+    "spaceEnabledDesc": "Permite que membros vejam e reproduzam sons nos canais de voz deste espaço.",
+    "allowInstanceSoundsLabel": "Exibir sons padrão da instância",
+    "allowInstanceSoundsDesc": "Inclui os sons globais da instância junto com os sons deste espaço.",
+    "spaceMaxConcurrentLabel": "Máximo de sons simultâneos",
+    "spaceMaxConcurrentDesc": "Limita quantos clipes podem tocar ao mesmo tempo neste espaço.",
+    "inheritInstanceLimit": "Herdar da instância ({{max}})",
+    "instanceOverridesTitle": "Padrões da Instância (Sobreposições neste Espaço)",
+    "instanceOverridesDesc": "Oculte sons específicos da instância ou ajuste o volume deles apenas neste espaço.",
+    "instanceSoundsHiddenBySpace": "Todos os sons da instância estão ocultos pela configuração do espaço acima.",
+    "hiddenBadge": "Oculto",
+    "hiddenCount": "Ocultos: {{value}}",
+    "hideInSpace": "Ocultar neste espaço",
+    "showInSpace": "Exibir neste espaço",
+    "overrideVolume": "Volume no espaço",
+    "resetOverride": "Redefinir"
   }
 }

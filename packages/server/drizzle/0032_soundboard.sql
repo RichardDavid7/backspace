@@ -17,4 +17,21 @@ CREATE INDEX `idx_soundboard_scope` ON `soundboard_sounds` (`scope_type`,`scope_
 ALTER TABLE `instance_settings` ADD `soundboard_enabled` integer DEFAULT 1 NOT NULL;--> statement-breakpoint
 ALTER TABLE `instance_settings` ADD `max_soundboard_sounds_per_scope` integer DEFAULT 32 NOT NULL;--> statement-breakpoint
 ALTER TABLE `instance_settings` ADD `max_concurrent_soundboard_sounds` integer DEFAULT 3 NOT NULL;--> statement-breakpoint
-UPDATE `roles` SET `permissions` = CAST((CAST(`permissions` AS INTEGER) | 134217728) AS TEXT) WHERE `id` = `space_id` AND `permissions` IS NOT NULL AND `permissions` GLOB '[0-9]*';
+UPDATE `roles` SET `permissions` = CAST((CAST(`permissions` AS INTEGER) | 134217728) AS TEXT) WHERE `id` = `space_id` AND `permissions` IS NOT NULL AND `permissions` GLOB '[0-9]*';--> statement-breakpoint
+CREATE TABLE `space_soundboard_settings` (
+	`space_id` text PRIMARY KEY NOT NULL,
+	`soundboard_enabled` integer DEFAULT 1 NOT NULL,
+	`allow_instance_sounds` integer DEFAULT 1 NOT NULL,
+	`max_concurrent_sounds` integer,
+	FOREIGN KEY (`space_id`) REFERENCES `spaces`(`id`) ON UPDATE no action ON DELETE cascade
+);--> statement-breakpoint
+CREATE TABLE `space_soundboard_overrides` (
+	`space_id` text NOT NULL,
+	`sound_id` text NOT NULL,
+	`hidden` integer DEFAULT 0 NOT NULL,
+	`volume` integer,
+	PRIMARY KEY(`space_id`, `sound_id`),
+	FOREIGN KEY (`space_id`) REFERENCES `spaces`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`sound_id`) REFERENCES `soundboard_sounds`(`id`) ON UPDATE no action ON DELETE cascade
+);--> statement-breakpoint
+CREATE INDEX `idx_space_soundboard_overrides_space` ON `space_soundboard_overrides` (`space_id`);

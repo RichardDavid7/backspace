@@ -11,6 +11,8 @@ export interface SoundboardPlayMessage {
   emoji: string;
   senderUserId: string;
   durationMs: number;
+  /** Optional per-sound volume scale from space override (0..1, defaults to 1). */
+  volumeScale?: number;
 }
 
 const SAFE_SOUNDBOARD_FILE_URL = /^\/api\/soundboard\/files\/[a-zA-Z0-9_-]+\.(wav|mp3|ogg|webm|m4a|aac|flac|opus)$/;
@@ -52,6 +54,9 @@ export function decodeSoundboardPlay(payload: Uint8Array): SoundboardPlayMessage
     const durationMs = typeof obj.durationMs === 'number' && Number.isFinite(obj.durationMs)
       ? Math.max(0, obj.durationMs)
       : 1500;
+    const volumeScale = typeof obj.volumeScale === 'number' && Number.isFinite(obj.volumeScale)
+      ? Math.max(0, Math.min(1, obj.volumeScale))
+      : undefined;
     return {
       type: 'soundboard_play',
       soundId: obj.soundId,
@@ -60,6 +65,7 @@ export function decodeSoundboardPlay(payload: Uint8Array): SoundboardPlayMessage
       emoji: obj.emoji,
       senderUserId: obj.senderUserId,
       durationMs,
+      ...(volumeScale !== undefined ? { volumeScale } : {}),
     };
   } catch {
     return null;
