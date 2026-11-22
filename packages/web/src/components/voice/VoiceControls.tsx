@@ -320,7 +320,7 @@ export function VoiceControls() {
         {canUseSoundboard && showSoundboard && soundboardAnchor && createPortal(
           <div
             ref={soundboardPopoverRef}
-            className="fixed z-40"
+            className="fixed z-[200]"
             style={{ left: soundboardAnchor.left, bottom: soundboardAnchor.bottom }}
           >
             <SoundboardPopover
