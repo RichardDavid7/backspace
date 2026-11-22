@@ -5,6 +5,8 @@ import type { ChosenUserStatus, User } from '@backspace/shared';
 import { selectMyChosenStatus, useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useFormatters } from '../../i18n/formatters';
+import { usePortalContainer } from '../../hooks/usePortalContainer';
+import { layoutPixels, layoutRect } from '../../platform/interfaceScale';
 
 const REVERT_STORAGE_KEY = 'backspace_status_revert';
 
@@ -179,6 +181,7 @@ export function StatusPickerPopover({
 }: StatusPickerPopoverProps) {
   const { t } = useTranslation(['common']);
   const { formatTime } = useFormatters();
+  const portalContainer = usePortalContainer();
   const currentStatus: ChosenUserStatus = useAuthStore(selectMyChosenStatus) ?? 'online';
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const openUserProfile = useUIStore((s) => s.openUserProfile);
@@ -199,13 +202,15 @@ export function StatusPickerPopover({
     const updatePos = () => {
       const el = anchorRef.current;
       if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const width = Math.min(256, window.innerWidth - 16);
-      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const rect = layoutRect(el.getBoundingClientRect());
+      const vw = layoutPixels(window.innerWidth);
+      const vh = layoutPixels(window.innerHeight);
+      const width = Math.min(256, vw - 16);
+      const left = Math.max(8, Math.min(rect.left, vw - width - 8));
       if (placement === 'below') {
         setPos({ left, top: rect.bottom + 8 });
       } else {
-        setPos({ left, bottom: window.innerHeight - rect.top + 8 });
+        setPos({ left, bottom: vh - rect.top + 8 });
       }
     };
     updatePos();
@@ -374,6 +379,6 @@ export function StatusPickerPopover({
         </div>
       )}
     </div>,
-    document.body,
+    portalContainer,
   );
 }
