@@ -163,9 +163,20 @@ interface StatusPickerPopoverProps {
   onClose: () => void;
   anchorRef: React.RefObject<HTMLElement | null>;
   user: User;
+  /** 'above' anchors above the trigger (desktop sidebar); 'below' anchors below it (mobile You screen). */
+  placement?: 'above' | 'below';
+  /** Show the "View Profile" footer button (hidden when already on a profile screen). */
+  showProfileButton?: boolean;
 }
 
-export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPickerPopoverProps) {
+export function StatusPickerPopover({
+  open,
+  onClose,
+  anchorRef,
+  user,
+  placement = 'above',
+  showProfileButton = true,
+}: StatusPickerPopoverProps) {
   const { t } = useTranslation(['common']);
   const { formatTime } = useFormatters();
   const currentStatus: ChosenUserStatus = useAuthStore(selectMyChosenStatus) ?? 'online';
@@ -175,7 +186,7 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
   const [duration, setDuration] = useState<DurationOption>('none');
   const [saving, setSaving] = useState(false);
   const [revertRecord, setRevertRecord] = useState<StatusRevertRecord | null>(() => readRevertRecord(user.id));
-  const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
   const popoverRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -189,14 +200,17 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
       const el = anchorRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      setPos({
-        left: Math.max(8, Math.min(rect.left, window.innerWidth - 264)),
-        bottom: window.innerHeight - rect.top + 8,
-      });
+      const width = Math.min(256, window.innerWidth - 16);
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      if (placement === 'below') {
+        setPos({ left, top: rect.bottom + 8 });
+      } else {
+        setPos({ left, bottom: window.innerHeight - rect.top + 8 });
+      }
     };
     updatePos();
 
-    const onMouseDown = (e: MouseEvent) => {
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
       if (anchorRef.current?.contains(target)) return;
       if (popoverRef.current?.contains(target)) return;
@@ -206,14 +220,16 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('resize', updatePos);
-    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown, { passive: true });
     document.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('resize', updatePos);
-      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, anchorRef, onClose]);
+  }, [open, anchorRef, onClose, placement, user.id]);
 
   if (!open || !pos) return null;
 
@@ -267,8 +283,11 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed z-50 w-64 glass-bubble rounded-xl border border-border-soft shadow-2xl p-2.5 space-y-2.5 text-txt-primary"
-      style={{ left: pos.left, bottom: pos.bottom }}
+      className="fixed z-50 w-64 max-w-[calc(100vw-1rem)] glass-bubble rounded-xl border border-border-soft shadow-2xl p-2.5 space-y-2.5 text-txt-primary"
+      style={{
+        left: pos.left,
+        ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }),
+      }}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Status list */}
@@ -340,18 +359,20 @@ export function StatusPickerPopover({ open, onClose, anchorRef, user }: StatusPi
       </div>
 
       {/* View profile button */}
-      <div className="border-t border-white/[0.06] pt-2">
-        <button
-          type="button"
-          onClick={handleOpenProfile}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
-        >
-          <svg className="w-4 h-4 text-txt-tertiary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-          </svg>
-          <span>{t('statusPicker.viewProfile')}</span>
-        </button>
-      </div>
+      {showProfileButton && (
+        <div className="border-t border-white/[0.06] pt-2">
+          <button
+            type="button"
+            onClick={handleOpenProfile}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4 text-txt-tertiary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </svg>
+            <span>{t('statusPicker.viewProfile')}</span>
+          </button>
+        </div>
+      )}
     </div>,
     document.body,
   );
