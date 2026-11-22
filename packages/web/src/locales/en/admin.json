@@ -476,7 +476,8 @@
       "storage": "Storage",
       "updates": "Updates",
       "users": "Users",
-      "telemetry": "Say hi"
+      "telemetry": "Say hi",
+      "audio": "Audio"
     }
   },
   "audio": {

@@ -506,7 +506,8 @@
       "storage": "Хранилище",
       "updates": "Обновления",
       "users": "Пользователи",
-      "telemetry": "Привет"
+      "telemetry": "Привет",
+      "audio": "Аудио"
     }
   },
   "audio": {

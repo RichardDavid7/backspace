@@ -8,7 +8,7 @@ import { api } from '../../api/client';
 import { onFederationPeersChanged } from '../../hooks/useWebSocket';
 import { useInstanceUpdateBadge } from '../../hooks/useInstanceUpdateBadge';
 
-type SectionId = 'general' | 'registration' | 'federation' | 'streaming' | 'storage' | 'users' | 'updates' | 'telemetry';
+type SectionId = 'general' | 'registration' | 'federation' | 'streaming' | 'audio' | 'storage' | 'users' | 'updates' | 'telemetry';
 
 type SectionDef = {
   id: SectionId;
@@ -48,6 +48,14 @@ const sections: SectionDef[] = [
     icon: (
       <svg className="w-5 h-5 text-txt-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'audio',
+    icon: (
+      <svg className="w-5 h-5 text-txt-secondary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
       </svg>
     ),
   },

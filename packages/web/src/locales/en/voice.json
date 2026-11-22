@@ -338,6 +338,6 @@
     "slotUsage": "{{current}} / {{max}}",
     "limitReached": "This space has reached the instance limit for custom sounds.",
     "disabledByInstance": "Custom sounds for spaces are disabled by the instance administrator.",
-    "previewHint": "Right-click a sound to preview locally"
+    "previewHint": "Right-click or hold a sound to preview locally"
   }
 }
