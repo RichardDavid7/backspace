@@ -353,6 +353,7 @@
     "hideInSpace": "Скрыть в этом пространстве",
     "showInSpace": "Показать в этом пространстве",
     "overrideVolume": "Громкость в пространстве",
-    "resetOverride": "Сбросить"
+    "resetOverride": "Сбросить",
+    "decibels": "{{value}} дБ"
   }
 }

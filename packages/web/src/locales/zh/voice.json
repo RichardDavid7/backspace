@@ -347,6 +347,7 @@
     "hideInSpace": "在此空间中隐藏",
     "showInSpace": "在此空间中显示",
     "overrideVolume": "空间音量",
-    "resetOverride": "重置"
+    "resetOverride": "重置",
+    "decibels": "{{value}} dB"
   }
 }
