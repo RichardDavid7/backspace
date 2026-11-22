@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { SoundboardScopeType, SoundboardSound } from '@backspace/shared';
 import { getApiForOrigin } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
+import { usePortalContainer } from '../../hooks/usePortalContainer';
 import { Modal } from '../ui/Modal';
 import { Toggle } from '../ui/Toggle';
 import {
@@ -58,6 +60,8 @@ export function SoundboardEditorModal({
 }: SoundboardEditorModalProps) {
   const { t } = useTranslation('voice');
   const addToast = useUIStore((s) => s.addToast);
+  const isMobile = useUIStore((s) => s.isMobile);
+  const portalContainer = usePortalContainer();
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🔊');
@@ -359,9 +363,9 @@ export function SoundboardEditorModal({
             >
               {emoji}
             </button>
-            {emojiPickerOpen && (
+            {emojiPickerOpen && !isMobile && (
               <div
-                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-full sm:translate-x-0 sm:translate-y-0 sm:mt-2 z-[250] max-w-[calc(100vw-2rem)] overflow-x-auto rounded-xl shadow-2xl border border-border-soft"
+                className="absolute left-0 top-full mt-2 z-[250] rounded-xl overflow-hidden shadow-2xl border border-border-soft"
                 onClick={(e) => e.stopPropagation()}
               >
                 <EmojiPicker
@@ -373,6 +377,31 @@ export function SoundboardEditorModal({
                 />
               </div>
             )}
+            {emojiPickerOpen &&
+              isMobile &&
+              createPortal(
+                <div
+                  className="fixed inset-0 z-[260] flex items-end justify-center animate-fade-in"
+                  onClick={() => setEmojiPickerOpen(false)}
+                >
+                  <div className="absolute inset-0 bg-black/50" />
+                  <div
+                    className="relative w-full h-[65vh] max-h-[520px] flex flex-col glass-modal rounded-t-2xl overflow-hidden animate-slide-up"
+                    style={{ paddingBottom: 'var(--safe-bottom)' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <EmojiPicker
+                      mobile
+                      stickers={false}
+                      onEmojiSelect={(selected) => {
+                        setEmoji(selected.native);
+                        setEmojiPickerOpen(false);
+                      }}
+                    />
+                  </div>
+                </div>,
+                portalContainer,
+              )}
           </div>
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary mb-1.5">
