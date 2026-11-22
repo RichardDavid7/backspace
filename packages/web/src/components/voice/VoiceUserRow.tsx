@@ -55,28 +55,14 @@ export function VoiceUserRow({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div className="relative flex-shrink-0">
-        <Avatar
-          src={avatar}
-          name={displayName}
-          size={avatarSize}
-          userId={userId}
-          avatarColor={avatarColor}
-          className={
-            isSpeaking
-              ? 'rounded-full ring-2 ring-status-online'
-              : activeSoundboard
-                ? 'rounded-full ring-2 ring-accent-sky'
-                : ''
-          }
-        />
-        {activeSoundboard && (
-          <span
-            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent-sky ring-2 ring-surface-sidebar animate-pulse"
-            title={activeSoundboard.name}
-          />
-        )}
-      </div>
+      <Avatar
+        src={avatar}
+        name={displayName}
+        size={avatarSize}
+        userId={userId}
+        avatarColor={avatarColor}
+        className={isSpeaking ? 'rounded-full ring-2 ring-status-online' : ''}
+      />
       <span className="text-[13px] text-txt-secondary truncate flex-1 min-w-0">
         {displayName}
       </span>
@@ -84,7 +70,7 @@ export function VoiceUserRow({
       <div className="flex items-center gap-1 flex-shrink-0">
         {activeSoundboard && (
           <span
-            className="inline-flex items-center gap-0.5 px-1 rounded bg-accent-sky/20 text-accent-sky text-[10px] leading-[15px]"
+            className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-surface-elevated text-[16px] leading-none shadow-sm"
             title={activeSoundboard.name}
           >
             <span>{activeSoundboard.emoji}</span>

@@ -192,7 +192,11 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
             )}
             {activeSoundboard && (
               <div
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-surface-elevated ring-2 ring-surface-channel flex items-center justify-center text-xs shadow"
+                className={`absolute -bottom-1.5 -right-1.5 rounded-full bg-surface-elevated ring-surface-channel flex items-center justify-center leading-none ${
+                  large
+                    ? 'w-12 h-12 ring-[3px] text-3xl shadow-lg'
+                    : 'w-9 h-9 ring-2 text-xl shadow-md'
+                }`}
                 title={activeSoundboard.name}
               >
                 {activeSoundboard.emoji}
@@ -212,7 +216,11 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
             </span>
             {hasVideo && activeSoundboard && (
               <span
-                className="inline-flex items-center justify-center px-1 rounded bg-white/15 text-xs leading-none py-0.5"
+                className={`inline-flex items-center justify-center bg-black/45 backdrop-blur-sm leading-none shadow ${
+                  large
+                    ? 'px-2 py-1 rounded-lg text-2xl'
+                    : 'px-1.5 py-0.5 rounded-md text-lg'
+                }`}
                 title={activeSoundboard.name}
               >
                 {activeSoundboard.emoji}
