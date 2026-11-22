@@ -42,11 +42,10 @@ function parseCodecInfo(report: { mimeType?: unknown; sdpFmtpLine?: unknown; cha
     // Per RFC 7587, Opus always declares 2 channels in RTP rtpmap (`opus/48000/2`)
     // even for mono streams, and LiveKit SFU advertises `stereo=1` as a decoder
     // capability on inbound SDP even for mono publishers. Only treat Opus as
-    // stereo when `sprop-stereo=1` explicitly signals a stereo sender.
-    if (/(?:^|;)\s*sprop-stereo=1\b/.test(fmtp)) {
-      channels = 'stereo';
-    } else {
-      channels = 'mono';
+    // stereo when `sprop-stereo=1` explicitly signals a stereo sender; leave
+    // channels unknown (null) when fmtp is omitted (e.g. Firefox getStats).
+    if (fmtp) {
+      channels = /(?:^|;)\s*sprop-stereo=1\b/.test(fmtp) ? 'stereo' : 'mono';
     }
   } else if (typeof report.channels === 'number') {
     channels = report.channels >= 2 ? 'stereo' : 'mono';
