@@ -87,6 +87,14 @@ export function AppLayout() {
     AudioManager.getInstance().setOutputDevice(outputDeviceId);
   }, [outputDeviceId]);
 
+  // Keep the live Soundboard master gain bus synced with user preferences so
+  // volume/mute changes take effect immediately on both active and remote clips.
+  const soundboardVolume = useVoiceStore((s) => s.soundboardVolume);
+  const soundboardMuted = useVoiceStore((s) => s.soundboardMuted);
+  useEffect(() => {
+    AudioManager.getInstance().setSoundboardVolume(soundboardVolume, soundboardMuted);
+  }, [soundboardVolume, soundboardMuted]);
+
   // Audio device hot-plug handler.
   //
   // Three jobs on every devicechange event:

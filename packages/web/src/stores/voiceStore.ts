@@ -157,7 +157,7 @@ export interface VoiceState {
   retainWatchers: (present: ReadonlySet<string>) => void;
   soundEffectVolume: number;                 // 0-200 (100 = default)
   setSoundEffectVolume: (volume: number) => void;
-  soundboardVolume: number;                  // 0-100 (10 = default)
+  soundboardVolume: number;                  // 0-100 (25 = default on quadratic curve)
   setSoundboardVolume: (volume: number) => void;
   soundboardMuted: boolean;
   setSoundboardMuted: (muted: boolean) => void;
@@ -358,7 +358,7 @@ export const useVoiceStore = create<VoiceState>()(
 
       soundEffectVolume: 100,
       setSoundEffectVolume: (volume) => set({ soundEffectVolume: volume }),
-      soundboardVolume: 10,
+      soundboardVolume: 25,
       setSoundboardVolume: (volume) => set({ soundboardVolume: Math.max(0, Math.min(100, Math.round(volume))) }),
       soundboardMuted: false,
       setSoundboardMuted: (muted) => set({ soundboardMuted: muted }),

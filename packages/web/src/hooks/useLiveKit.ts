@@ -722,7 +722,7 @@ export function useLiveKit() {
         if (vs.soundboardMuted || vs.soundboardMutedUserIds.has(senderUserId)) {
           return;
         }
-        if (vs.isDeafened) {
+        if (vs.isDeafened || vs.soundboardVolume <= 0) {
           vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
           return;
         }
@@ -733,8 +733,10 @@ export function useLiveKit() {
         vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
         const resolvedUrl = origin ? `${origin}${sb.fileUrl}` : sb.fileUrl;
         const clipScale = sb.volumeScale ?? 1;
-        void AudioManager.getInstance()
-          .playSoundUrl(resolvedUrl, { volume: (vs.soundboardVolume / 100) * 0.8 * clipScale })
+        const audioManager = AudioManager.getInstance();
+        audioManager.setSoundboardVolume(vs.soundboardVolume, vs.soundboardMuted);
+        void audioManager
+          .playSoundUrl(resolvedUrl, { volume: clipScale })
           .then((res) => {
             if (!res) {
               useVoiceStore.getState().finishSoundboardClip(sb.soundId);

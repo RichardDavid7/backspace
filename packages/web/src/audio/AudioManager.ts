@@ -13,6 +13,8 @@ export class AudioManager {
   private analyser: AnalyserNode | null = null;
   private masterCompressor: DynamicsCompressorNode | null = null;
   private masterBoost: GainNode | null = null;
+  private soundboardGain: GainNode | null = null;
+  private desiredSoundboardGain = 0.05; // 25% on quadratic curve (0.25^2 * 0.8)
   
   private currentInputDeviceId: string = 'default';
   private desiredOutputDeviceId: string = 'default';
@@ -97,6 +99,12 @@ export class AudioManager {
     this.masterBoost.gain.value = 1.41; // +3dB
     this.masterBoost.connect(this.masterCompressor);
     this.masterCompressor.connect(this.ctx.destination);
+
+    // Dedicated Soundboard master bus so volume/mute adjustments take effect
+    // immediately on both currently playing and newly triggered clips.
+    this.soundboardGain = this.ctx.createGain();
+    this.soundboardGain.gain.setValueAtTime(this.desiredSoundboardGain, this.ctx.currentTime);
+    this.soundboardGain.connect(this.masterBoost);
 
     this.inputGain.connect(this.inputDestination);
     this.inputGain.connect(this.analyser);
@@ -384,9 +392,23 @@ export class AudioManager {
     }
   }
 
+  /**
+   * Sets the live Soundboard output bus gain using a quadratic perceptual curve
+   * so lowering the slider smoothly reduces loudness (and muting silences
+   * currently playing clips immediately).
+   */
+  setSoundboardVolume(percent: number, muted = false): void {
+    const normalized = muted ? 0 : Math.max(0, Math.min(100, percent)) / 100;
+    const gain = normalized * normalized * 0.8;
+    this.desiredSoundboardGain = gain;
+    if (this.soundboardGain && this.ctx) {
+      this.soundboardGain.gain.setTargetAtTime(gain, this.ctx.currentTime, 0.015);
+    }
+  }
+
   async playSoundUrl(
     url: string,
-    options: { volume?: number } = {},
+    options: { volume?: number; route?: 'soundboard' | 'master' } = {},
   ): Promise<{ source: AudioBufferSourceNode; durationMs: number } | null> {
     this.activePlaybackCount++;
     this.clearIdleSuspendTimer();
@@ -410,7 +432,8 @@ export class AudioManager {
       source.buffer = buffer;
 
       const gainNode = this.ctx.createGain();
-      const targetVolume = Math.max(0, options.volume ?? 0.8);
+      const route = options.route ?? 'soundboard';
+      const targetVolume = Math.max(0, options.volume ?? (route === 'soundboard' ? 1 : 0.8));
       const now = this.ctx.currentTime;
       const attack = 0.01;
       const release = 0.01;
@@ -430,7 +453,7 @@ export class AudioManager {
       };
 
       source.connect(gainNode);
-      gainNode.connect(this.masterBoost!);
+      gainNode.connect(route === 'soundboard' ? this.soundboardGain! : this.masterBoost!);
       source.start(now);
       return { source, durationMs: Math.round(dur * 1000) };
     } catch (err) {
