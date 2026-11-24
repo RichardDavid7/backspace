@@ -921,12 +921,8 @@ function UserAreaPanel({
 
     const start = async () => {
       try {
-        const am = AudioManager.getInstance();
-        // Only wake the audio pipeline for the live meter when a mic stream is
-        // actually active — opening the popover while idle must not wake the DAC.
-        if (!am.hasActiveStream()) return;
-        await am.resumeContext();
-        const analyser = am.getAnalyserNode();
+        await AudioManager.getInstance().resumeContext();
+        const analyser = AudioManager.getInstance().getAnalyserNode();
         analyser.fftSize = 256;
         analyserRef.current = analyser;
         
@@ -949,7 +945,7 @@ function UserAreaPanel({
   }, [openPanel]);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent | TouchEvent) => {
+    const handleClick = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpenPanel(null);
         setShowInputDeviceList(false);
@@ -957,11 +953,7 @@ function UserAreaPanel({
       }
     };
     document.addEventListener('mousedown', handleClick);
-    document.addEventListener('touchstart', handleClick, { passive: true });
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('touchstart', handleClick);
-    };
+    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   const togglePanel = (panel: 'input' | 'output') => {
@@ -971,12 +963,7 @@ function UserAreaPanel({
       setOpenPanel(panel);
       setShowInputDeviceList(false);
       setShowOutputDeviceList(false);
-      // Resume the AudioContext only when opening the input panel with an
-      // active mic stream so the mic-level meter starts measuring without
-      // waking the audio interface while idle.
-      if (panel === 'input' && AudioManager.getInstance().hasActiveStream()) {
-        AudioManager.getInstance().resumeContext();
-      }
+      AudioManager.getInstance().resumeContext();
     }
   };
 
