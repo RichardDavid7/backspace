@@ -101,9 +101,10 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
 
     const clipScale = Math.max(0, Math.min(1, (sound.volumeOverride ?? 100) / 100));
 
-    if (!isDeafened && !soundboardMuted) {
+    if (!isDeafened && !soundboardMuted && soundboardVolume > 0) {
+      AudioManager.getInstance().setSoundboardVolume(soundboardVolume, soundboardMuted);
       void AudioManager.getInstance()
-        .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 * clipScale })
+        .playSoundUrl(resolvedUrl, { volume: clipScale })
         .then((res) => {
           if (!res) {
             finishSoundboardClip(sound.id);
@@ -151,8 +152,9 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     const clipScale = Math.max(0, Math.min(1, (sound.volumeOverride ?? 100) / 100));
 
     setPreviewingId(sound.id);
+    AudioManager.getInstance().setSoundboardVolume(soundboardVolume, soundboardMuted);
     void AudioManager.getInstance()
-      .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 * clipScale })
+      .playSoundUrl(resolvedUrl, { volume: clipScale })
       .then((res) => {
         if (!res) {
           setPreviewingId((curr) => (curr === sound.id ? null : curr));
@@ -312,7 +314,11 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
         <button
           type="button"
-          onClick={() => setSoundboardMuted(!soundboardMuted)}
+          onClick={() => {
+            const nextMuted = !soundboardMuted;
+            setSoundboardMuted(nextMuted);
+            AudioManager.getInstance().setSoundboardVolume(soundboardVolume, nextMuted);
+          }}
           className={`p-1 rounded-md transition-colors cursor-pointer ${
             soundboardMuted
               ? 'text-txt-danger bg-accent-rose/15'
@@ -339,8 +345,10 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           value={soundboardMuted ? 0 : Math.min(100, soundboardVolume)}
           onChange={(e) => {
             const val = Number(e.target.value);
+            const nextMuted = soundboardMuted && val > 0 ? false : soundboardMuted;
             if (soundboardMuted && val > 0) setSoundboardMuted(false);
             setSoundboardVolume(val);
+            AudioManager.getInstance().setSoundboardVolume(val, nextMuted);
           }}
           aria-label={t('soundboard.volumeLabel')}
           className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base

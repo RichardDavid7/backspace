@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { SoundboardScopeType, SoundboardSound, SpaceSoundboardSettings } from '@backspace/shared';
 import { getApiForOrigin } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useVoiceStore } from '../../stores/voiceStore';
 import { AudioManager } from '../../audio/AudioManager';
 import { Toggle } from '../ui/Toggle';
 import { SoundboardEditorModal } from './SoundboardEditorModal';
@@ -243,8 +244,11 @@ export function SoundboardManagerPanel({
       : sound.fileUrl;
     const clipScale = Math.max(0, Math.min(1, (sound.volumeOverride ?? 100) / 100));
     setPlayingId(sound.id);
-    void AudioManager.getInstance()
-      .playSoundUrl(resolvedUrl, { volume: 0.8 * clipScale })
+    const { soundboardVolume, soundboardMuted } = useVoiceStore.getState();
+    const audioManager = AudioManager.getInstance();
+    audioManager.setSoundboardVolume(soundboardVolume > 0 ? soundboardVolume : 25, soundboardMuted);
+    void audioManager
+      .playSoundUrl(resolvedUrl, { volume: clipScale })
       .then((res) => {
         if (!res) {
           setPlayingId((curr) => (curr === sound.id ? null : curr));
