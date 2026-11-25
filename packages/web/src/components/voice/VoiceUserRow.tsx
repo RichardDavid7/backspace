@@ -16,6 +16,7 @@ export interface VoiceUserRowProps {
   isPermissionMuted?: boolean;
   isLocallyMuted?: boolean;
   isSpeaking?: boolean;
+  activeSoundboard?: { emoji: string; name: string } | null;
   connectionWarning?: string | null;
   size?: 'compact' | 'default';
   className?: string;
@@ -36,6 +37,7 @@ export function VoiceUserRow({
   isPermissionMuted,
   isLocallyMuted,
   isSpeaking,
+  activeSoundboard,
   connectionWarning,
   size = 'default',
   className = '',
@@ -53,19 +55,41 @@ export function VoiceUserRow({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <Avatar
-        src={avatar}
-        name={displayName}
-        size={avatarSize}
-        userId={userId}
-        avatarColor={avatarColor}
-        className={isSpeaking ? 'rounded-full ring-2 ring-status-online' : ''}
-      />
+      <div className="relative flex-shrink-0">
+        <Avatar
+          src={avatar}
+          name={displayName}
+          size={avatarSize}
+          userId={userId}
+          avatarColor={avatarColor}
+          className={
+            isSpeaking
+              ? 'rounded-full ring-2 ring-status-online'
+              : activeSoundboard
+                ? 'rounded-full ring-2 ring-accent-sky'
+                : ''
+          }
+        />
+        {activeSoundboard && (
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent-sky ring-2 ring-surface-sidebar animate-pulse"
+            title={activeSoundboard.name}
+          />
+        )}
+      </div>
       <span className="text-[13px] text-txt-secondary truncate flex-1 min-w-0">
         {displayName}
       </span>
       {/* Status badges */}
       <div className="flex items-center gap-1 flex-shrink-0">
+        {activeSoundboard && (
+          <span
+            className="inline-flex items-center gap-0.5 px-1 rounded bg-accent-sky/20 text-accent-sky text-[10px] leading-[15px]"
+            title={activeSoundboard.name}
+          >
+            <span>{activeSoundboard.emoji}</span>
+          </span>
+        )}
         {connectionWarning && (
           <span
             className="w-4 h-4 rounded-full bg-status-idle/15 text-status-idle flex items-center justify-center"

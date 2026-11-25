@@ -41,6 +41,7 @@ import {
   syncScreenShareAudio,
 } from '../utils/screenShare';
 import { encodeStreamWatch, parseShareSignal, parseStreamWatch, streamWatchFor, streamWatchKey } from '../utils/streamWatchProtocol';
+import { decodeSoundboardPlay } from '../utils/soundboardProtocol';
 import { StreamRepublishTracker } from '../utils/streamRepublish';
 import { StreamResumeMemory, type RememberedStream } from '../utils/streamResume';
 import { getMediaStreamTrack } from '../utils/livekitInternals';
@@ -489,6 +490,24 @@ export function useLiveKit() {
       }
       if (signal === 'stream_stop') {
         resume.stopAnnounced(participant.identity);
+        return;
+      }
+      const sb = decodeSoundboardPlay(payload);
+      if (sb) {
+        const senderUserId = resolveParticipantUserId(participant.identity);
+        const vs = useVoiceStore.getState();
+        if (vs.soundboardMuted || vs.soundboardMutedUserIds.has(senderUserId)) {
+          return;
+        }
+        vs.markUserPlayingSoundboard(senderUserId, sb.emoji, sb.name, sb.durationMs);
+        if (vs.isDeafened) return;
+        const origin = voiceSessionOrigin(vs);
+        const resolvedUrl = sb.fileUrl.startsWith('/') && origin
+          ? `${origin}${sb.fileUrl}`
+          : sb.fileUrl;
+        void AudioManager.getInstance().playSoundUrl(resolvedUrl, {
+          volume: (vs.soundboardVolume / 100) * 0.8,
+        });
         return;
       }
     }

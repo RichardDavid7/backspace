@@ -5,6 +5,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from '../../stores/spaceStore';
 import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
+import { SoundboardPopover } from './SoundboardPopover';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { handleMuteAction, handleDeafenAction, handleCameraAction, handleScreenShareAction, handleDisconnectAction } from '../../utils/voiceActions';
 import { VOICE_CHROME_ATTR } from '../../hooks/usePointerReveal';
@@ -47,10 +48,12 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
   // popover (quality controls + the red stop action).
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const shareBtnRef = useRef<HTMLButtonElement>(null);
+  const [soundboardOpen, setSoundboardOpen] = useState(false);
+  const soundboardMuted = useVoiceStore((s) => s.soundboardMuted);
 
-  // An open share menu pins the bar: the popover hangs off it, so letting the
+  // An open share menu or soundboard pins the bar: the popover hangs off it, so letting the
   // idle timer pull it away would take the menu with it.
-  const fullscreenVisibility = revealed || shareMenuOpen
+  const fullscreenVisibility = revealed || shareMenuOpen || soundboardOpen
     ? 'opacity-100'
     : 'opacity-0 focus-within:opacity-100 [@media(hover:none)]:opacity-100 [@media(any-pointer:coarse)]:opacity-100';
   const containerClassName = voiceFullscreen
@@ -198,6 +201,34 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
 
         {/* Separator */}
         <div className="w-[1px] h-6 bg-white/10 mx-0.5" />
+
+        {/* Soundboard */}
+        <div className="relative">
+          <button
+            onClick={() => setSoundboardOpen((open) => !open)}
+            className={soundboardOpen
+              ? `${btnBase} bg-accent-sky/20 text-accent-sky`
+              : soundboardMuted
+                ? `${btnBase} bg-surface-channel text-txt-tertiary hover:bg-surface-elevated hover:text-txt-primary`
+                : btnDefault
+            }
+            title={t('voice:soundboard.title')}
+            aria-haspopup="dialog"
+            aria-expanded={soundboardOpen}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+            </svg>
+          </button>
+          {soundboardOpen && (
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-30">
+              <SoundboardPopover
+                isOpen={soundboardOpen}
+                onClose={() => setSoundboardOpen(false)}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Chat Toggle */}
         <button

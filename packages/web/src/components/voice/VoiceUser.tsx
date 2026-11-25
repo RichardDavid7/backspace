@@ -24,6 +24,7 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
   const isDeafened = useVoiceStore((s) => s.isDeafened);
   const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const isSpeaking = useVoiceStore((s) => s.speakingParticipantIds.has(participant.identity));
+  const activeSoundboard = useVoiceStore((s) => s.activeSoundboardUsers.get(participant.userId) ?? null);
   const spaceMutedUserIds = useVoiceStore((s) => s.spaceMutedUserIds);
   const spaceDeafenedUserIds = useVoiceStore((s) => s.spaceDeafenedUserIds);
   const permissionMutedUserIds = useVoiceStore((s) => s.permissionMutedUserIds);
@@ -129,6 +130,16 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
         onChange: (checked) => useVoiceStore.getState().setParticipantMute(targetUserId, checked),
       });
 
+      // Mute Soundboard checkbox (per-user)
+      items.push({
+        key: 'mute-soundboard-user',
+        type: 'checkbox',
+        label: t('voice:soundboard.muteUser'),
+        subscribe: useVoiceStore.subscribe,
+        getChecked: () => useVoiceStore.getState().soundboardMutedUserIds.has(targetUserId),
+        onChange: (checked) => useVoiceStore.getState().setUserSoundboardMuted(targetUserId, checked),
+      });
+
       items.push({ key: 'vol-sep', type: 'separator' });
 
       // Volume slider (custom, needs store subscription via wrapper component)
@@ -152,11 +163,24 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
           : `bg-surface-base rounded-xl ${
               isSpeaking
                 ? 'ring-[3px] ring-status-online shadow-[0_0_12px_rgba(134,239,172,0.25)]'
-                : 'ring-1 ring-white/[0.06] hover:ring-white/10'
+                : activeSoundboard
+                  ? 'ring-[3px] ring-accent-sky shadow-[0_0_14px_rgba(56,189,248,0.3)]'
+                  : 'ring-1 ring-white/[0.06] hover:ring-white/10'
             }`
       } h-full w-full`}
       onContextMenu={handleContextMenu}
     >
+      {activeSoundboard && (
+        <div
+          className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent-sky/90 text-surface-950 text-[11px] font-semibold shadow-md animate-pulse"
+          title={activeSoundboard.name}
+        >
+          <span className="w-2 h-2 rounded-full bg-white" />
+          <span>{activeSoundboard.emoji}</span>
+          <span className="max-w-[110px] truncate">{activeSoundboard.name}</span>
+        </div>
+      )}
+
       {hasVideo ? (
         <video
           ref={videoRef}
@@ -178,6 +202,17 @@ export function VoiceUser({ tile, large, edgeToEdge = false, chromeVisible = tru
             />
             {isSpeaking && (
               <div className="absolute -inset-1.5 rounded-full ring-[3px] ring-status-online animate-pulse" />
+            )}
+            {!isSpeaking && activeSoundboard && (
+              <div className="absolute -inset-1.5 rounded-full ring-[3px] ring-accent-sky animate-pulse" />
+            )}
+            {activeSoundboard && (
+              <div
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-accent-sky text-surface-950 ring-2 ring-surface-channel flex items-center justify-center text-xs shadow"
+                title={activeSoundboard.name}
+              >
+                {activeSoundboard.emoji}
+              </div>
             )}
           </div>
         </div>
