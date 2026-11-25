@@ -9,6 +9,7 @@ import { getDb, schema } from '../db/index.js';
 import { config } from '../config.js';
 import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
+import { hasPermission, PermissionBits } from '../utils/permissions.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 
 const MAX_SOUNDBOARD_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -63,25 +64,30 @@ function isInstanceAdmin(userId: string): boolean {
   return u?.isAdmin === 1;
 }
 
+function getSoundboardLimits(): { soundboardEnabled: boolean; maxSoundsPerScope: number; maxConcurrentSounds: number } {
+  const db = getDb();
+  const row = db
+    .select({
+      soundboardEnabled: schema.instanceSettings.soundboardEnabled,
+      maxSoundboardSoundsPerScope: schema.instanceSettings.maxSoundboardSoundsPerScope,
+      maxConcurrentSoundboardSounds: schema.instanceSettings.maxConcurrentSoundboardSounds,
+    })
+    .from(schema.instanceSettings)
+    .where(eq(schema.instanceSettings.id, 1))
+    .get();
+  return {
+    soundboardEnabled: (row?.soundboardEnabled ?? 1) === 1,
+    maxSoundsPerScope: row?.maxSoundboardSoundsPerScope ?? 32,
+    maxConcurrentSounds: row?.maxConcurrentSoundboardSounds ?? 3,
+  };
+}
+
 function canManageScope(userId: string, scopeType: SoundboardScopeType, scopeId: string): boolean {
   if (scopeType === 'instance') {
     return isInstanceAdmin(userId);
   }
-  const db = getDb();
   if (scopeType === 'space') {
-    if (isInstanceAdmin(userId)) return true;
-    const member = db.select({ userId: schema.spaceMembers.userId })
-      .from(schema.spaceMembers)
-      .where(and(eq(schema.spaceMembers.spaceId, scopeId), eq(schema.spaceMembers.userId, userId)))
-      .get();
-    return Boolean(member);
-  }
-  if (scopeType === 'dm') {
-    const dmMember = db.select({ userId: schema.dmMembers.userId })
-      .from(schema.dmMembers)
-      .where(and(eq(schema.dmMembers.dmChannelId, scopeId), eq(schema.dmMembers.userId, userId)))
-      .get();
-    return Boolean(dmMember);
+    return hasPermission(userId, scopeId, PermissionBits.MANAGE_SOUNDBOARD);
   }
   return false;
 }
@@ -102,12 +108,12 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     },
   });
 
-  // GET /api/soundboard?spaceId=...&dmChannelId=...
-  app.get<{ Querystring: { spaceId?: string; dmChannelId?: string } }>('/api/soundboard', {
+  // GET /api/soundboard?spaceId=...
+  app.get<{ Querystring: { spaceId?: string } }>('/api/soundboard', {
     preHandler: authenticate,
   }, async (request, reply) => {
     const db = getDb();
-    const { spaceId, dmChannelId } = request.query;
+    const { spaceId } = request.query;
 
     const instanceRows = db.select()
       .from(schema.soundboardSounds)
@@ -137,29 +143,17 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
           .all();
         scopeManageable = canManageScope(request.userId, 'space', spaceId);
       }
-    } else if (dmChannelId) {
-      const dmMember = db.select({ userId: schema.dmMembers.userId })
-        .from(schema.dmMembers)
-        .where(and(eq(schema.dmMembers.dmChannelId, dmChannelId), eq(schema.dmMembers.userId, request.userId)))
-        .get();
-      if (dmMember) {
-        scopedRows = db.select()
-          .from(schema.soundboardSounds)
-          .where(and(
-            eq(schema.soundboardSounds.scopeType, 'dm'),
-            eq(schema.soundboardSounds.scopeId, dmChannelId),
-          ))
-          .orderBy(asc(schema.soundboardSounds.position), asc(schema.soundboardSounds.createdAt))
-          .all();
-        scopeManageable = true;
-      }
     }
 
+    const limits = getSoundboardLimits();
     return reply.code(200).send({
-      instanceSounds: instanceRows.map(rowToSound),
-      scopedSounds: scopedRows.map(rowToSound),
+      instanceSounds: limits.soundboardEnabled ? instanceRows.map(rowToSound) : [],
+      scopedSounds: limits.soundboardEnabled ? scopedRows.map(rowToSound) : [],
       canManageInstance: isInstanceAdmin(request.userId),
-      canManageScope: scopeManageable,
+      canManageScope: scopeManageable && limits.soundboardEnabled,
+      soundboardEnabled: limits.soundboardEnabled,
+      maxSoundsPerScope: limits.maxSoundsPerScope,
+      maxConcurrentSounds: limits.maxConcurrentSounds,
     });
   });
 
@@ -200,7 +194,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
           const trimmed = val.trim().slice(0, MAX_SOUNDBOARD_FOLDER);
           folder = trimmed.length > 0 ? trimmed : null;
         }
-        else if (part.fieldname === 'scopeType' && (val === 'instance' || val === 'space' || val === 'dm')) scopeType = val;
+        else if (part.fieldname === 'scopeType' && (val === 'instance' || val === 'space')) scopeType = val;
         else if (part.fieldname === 'scopeId' && val.trim()) scopeId = val.trim();
         else if (part.fieldname === 'durationMs') {
           const parsed = Number(val);
@@ -225,12 +219,6 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'validation_failed');
     }
 
-    const id = generateSnowflake();
-    const fileName = `${randomUUID()}.${ext}`;
-    const dir = soundboardDir();
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, fileName), fileBuffer);
-
     const db = getDb();
     const existing = db.select({ position: schema.soundboardSounds.position })
       .from(schema.soundboardSounds)
@@ -239,6 +227,22 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
         eq(schema.soundboardSounds.scopeId, scopeId),
       ))
       .all();
+
+    if (scopeType !== 'instance') {
+      const { soundboardEnabled, maxSoundsPerScope } = getSoundboardLimits();
+      if (!soundboardEnabled) {
+        return sendError(reply, 403, 'forbidden');
+      }
+      if (existing.length >= maxSoundsPerScope) {
+        return sendError(reply, 400, 'validation_failed');
+      }
+    }
+
+    const id = generateSnowflake();
+    const fileName = `${randomUUID()}.${ext}`;
+    const dir = soundboardDir();
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, fileName), fileBuffer);
     const nextPos = existing.length > 0 ? Math.max(...existing.map((r) => r.position)) + 1 : 0;
 
     const row: typeof schema.soundboardSounds.$inferInsert = {

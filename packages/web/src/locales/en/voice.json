@@ -273,7 +273,6 @@
   },
   "soundboard": {
     "title": "Soundboard",
-    "manage": "Manage sounds",
     "close": "Close",
     "muteAll": "Mute soundboard",
     "unmuteAll": "Unmute soundboard",
@@ -284,7 +283,6 @@
     "loadFailed": "Could not load soundboard sounds.",
     "instanceSection": "Instance Defaults",
     "spaceSection": "Space Sounds",
-    "dmSection": "Group Sounds",
     "emptyScope": "No sounds added yet.",
     "addButton": "Add",
     "addTitle": "Add Sound",
@@ -327,6 +325,9 @@
     "addToFolder": "Add sound to {{folder}}",
     "managerInstanceDesc": "Default sounds available to everyone on this instance.",
     "managerSpaceDesc": "Custom sounds shared with members of this space.",
-    "managerDmDesc": "Custom sounds shared with members of this group."
+    "slotUsage": "{{current}} / {{max}}",
+    "limitReached": "This space has reached the instance limit for custom sounds.",
+    "disabledByInstance": "Custom sounds for spaces are disabled by the instance administrator.",
+    "previewHint": "Right-click a sound to preview locally"
   }
 }

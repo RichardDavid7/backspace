@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../stores/uiStore';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { useActiveDmCall } from '../../hooks/useActiveDmCall';
 import {
   handleCameraAction,
@@ -50,6 +52,9 @@ export function MobileVoiceFullScreen() {
   const channels = useSpaceStore((s) => s.channels);
   const spaces = useSpaceStore((s) => s.spaces);
   const channelToSpaceMap = useSpaceStore((s) => s.channelToSpaceMap);
+  const channelPerms = useSpaceStore((s) => currentVoiceChannelId ? s.channelPermissions.get(currentVoiceChannelId) : undefined);
+  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const canUseSoundboard = soundboardEnabled && (!currentVoiceChannelId || hasPermissionBit(channelPerms, PermissionBits.USE_SOUNDBOARD));
 
   const { title: dmCallTitle } = useActiveDmCall();
 
@@ -543,19 +548,21 @@ export function MobileVoiceFullScreen() {
         </button>
 
         {/* Soundboard */}
-        <button
-          onClick={() => setSoundboardOpen((v) => !v)}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            soundboardOpen
-              ? 'bg-accent-sky/20 text-accent-sky'
-              : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
-          }`}
-          aria-label={t('voice:soundboard.title')}
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-          </svg>
-        </button>
+        {canUseSoundboard && (
+          <button
+            onClick={() => setSoundboardOpen((v) => !v)}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              soundboardOpen
+                ? 'bg-accent-primary/20 text-accent-primary'
+                : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
+            }`}
+            aria-label={t('voice:soundboard.title')}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+            </svg>
+          </button>
+        )}
 
         {/* Disconnect */}
         <button

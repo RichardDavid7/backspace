@@ -449,5 +449,22 @@
       "users": "用户",
       "telemetry": "打个招呼"
     }
+  },
+  "soundboard": {
+    "description": "管理全局音效板可用性、上传限制和默认音效片段。",
+    "saved": "音效板设置已保存。",
+    "saveFailed": "保存音效板设置失败。",
+    "soundboardEnabled": {
+      "label": "启用音效板",
+      "description": "允许用户在此实例上播放和管理音效板片段。禁用后将隐藏界面中的所有音效板按钮。"
+    },
+    "maxSoundboardPerScope": {
+      "label": "每个空间的最大自定义音效数",
+      "description": "限制每个空间可上传的音效板片段数量（0 表示禁用自定义上传）。"
+    },
+    "maxConcurrentSoundboard": {
+      "label": "最多同时播放的音效数",
+      "description": "限制语音通话中同时播放的音效片段数量，防止音频刷屏。"
+    }
   }
 }

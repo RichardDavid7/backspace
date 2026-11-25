@@ -13,7 +13,7 @@ import { StoragePanel } from '../instanceSettingsPanels/StoragePanel';
 import { UsersPanel } from '../instanceSettingsPanels/UsersPanel';
 import { UpdatesPanel } from '../instanceSettingsPanels/UpdatesPanel';
 import { TelemetryPanel } from '../instanceSettingsPanels/TelemetryPanel';
-import { SoundboardManagerPanel } from '../../voice/SoundboardManagerPanel';
+import { SoundboardPanel } from '../instanceSettingsPanels/SoundboardPanel';
 
 type SubTab = 'general' | 'registration' | 'federation' | 'streaming' | 'soundboard' | 'storage' | 'users' | 'updates' | 'telemetry';
 
@@ -73,7 +73,7 @@ export function InstancePanel() {
       {subTab === 'registration' && <RegistrationPanel />}
       {subTab === 'federation' && <FederationPanel onApprovalCountChange={setApprovalCount} />}
       {subTab === 'streaming' && <StreamingPanel />}
-      {subTab === 'soundboard' && <SoundboardManagerPanel scopeType="instance" scopeId={null} origin="" />}
+      {subTab === 'soundboard' && <SoundboardPanel />}
       {subTab === 'storage' && <StoragePanel />}
       {subTab === 'users' && <UsersPanel />}
       {subTab === 'updates' && <UpdatesPanel />}

@@ -43,6 +43,9 @@ function rowToLimits(row: typeof schema.instanceSettings.$inferSelect): Instance
       } catch { return null; }
     })(),
     allowCustomBitrate: row.allowCustomBitrate === 1,
+    soundboardEnabled: (row.soundboardEnabled ?? 1) === 1,
+    maxSoundboardSoundsPerScope: row.maxSoundboardSoundsPerScope ?? 32,
+    maxConcurrentSoundboardSounds: row.maxConcurrentSoundboardSounds ?? 3,
   };
 }
 
@@ -212,6 +215,36 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
 
     if (body.allowCustomBitrate !== undefined) {
       updateData.allowCustomBitrate = body.allowCustomBitrate ? 1 : 0;
+    }
+
+    if (body.soundboardEnabled !== undefined) {
+      updateData.soundboardEnabled = body.soundboardEnabled ? 1 : 0;
+    }
+
+    if (body.maxSoundboardSoundsPerScope !== undefined) {
+      if (
+        typeof body.maxSoundboardSoundsPerScope !== 'number'
+        || !Number.isFinite(body.maxSoundboardSoundsPerScope)
+        || !Number.isInteger(body.maxSoundboardSoundsPerScope)
+        || body.maxSoundboardSoundsPerScope < 0
+        || body.maxSoundboardSoundsPerScope > 500
+      ) {
+        return sendError(reply, 400, 'validation_failed');
+      }
+      updateData.maxSoundboardSoundsPerScope = body.maxSoundboardSoundsPerScope;
+    }
+
+    if (body.maxConcurrentSoundboardSounds !== undefined) {
+      if (
+        typeof body.maxConcurrentSoundboardSounds !== 'number'
+        || !Number.isFinite(body.maxConcurrentSoundboardSounds)
+        || !Number.isInteger(body.maxConcurrentSoundboardSounds)
+        || body.maxConcurrentSoundboardSounds < 1
+        || body.maxConcurrentSoundboardSounds > 10
+      ) {
+        return sendError(reply, 400, 'validation_failed');
+      }
+      updateData.maxConcurrentSoundboardSounds = body.maxConcurrentSoundboardSounds;
     }
 
     if (body.bitrateMatrixOverrides !== undefined) {

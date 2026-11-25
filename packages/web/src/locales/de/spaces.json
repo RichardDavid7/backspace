@@ -456,7 +456,9 @@
       "moveMembers": "Mitglieder verschieben",
       "stream": "Streamen",
       "disconnectMembers": "Mitglieder trennen",
-      "mentionEveryone": "@everyone, @here und Rollen erwähnen"
+      "mentionEveryone": "@everyone, @here und Rollen erwähnen",
+      "useSoundboard": "Soundboard verwenden",
+      "manageSoundboard": "Soundboard verwalten"
     },
     "tristate": {
       "deny": "Verbieten",

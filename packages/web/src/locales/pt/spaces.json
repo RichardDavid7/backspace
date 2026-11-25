@@ -459,7 +459,9 @@
       "moveMembers": "Mover membros",
       "stream": "Transmitir",
       "disconnectMembers": "Desconectar membros",
-      "mentionEveryone": "Mencionar @everyone, @here e cargos"
+      "mentionEveryone": "Mencionar @everyone, @here e cargos",
+      "useSoundboard": "Usar Efeitos Sonoros",
+      "manageSoundboard": "Gerenciar Efeitos Sonoros"
     },
     "tristate": {
       "deny": "Negar",

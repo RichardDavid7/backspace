@@ -13,4 +13,8 @@ CREATE TABLE `soundboard_sounds` (
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );--> statement-breakpoint
-CREATE INDEX `idx_soundboard_scope` ON `soundboard_sounds` (`scope_type`,`scope_id`,`position`);
+CREATE INDEX `idx_soundboard_scope` ON `soundboard_sounds` (`scope_type`,`scope_id`,`position`);--> statement-breakpoint
+ALTER TABLE `instance_settings` ADD `soundboard_enabled` integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE `instance_settings` ADD `max_soundboard_sounds_per_scope` integer DEFAULT 32 NOT NULL;--> statement-breakpoint
+ALTER TABLE `instance_settings` ADD `max_concurrent_soundboard_sounds` integer DEFAULT 3 NOT NULL;--> statement-breakpoint
+UPDATE `roles` SET `permissions` = CAST((CAST(`permissions` AS INTEGER) | 134217728) AS TEXT) WHERE `id` = `space_id` AND `permissions` IS NOT NULL AND `permissions` GLOB '[0-9]*';

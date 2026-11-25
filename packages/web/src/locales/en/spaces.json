@@ -456,7 +456,9 @@
       "moveMembers": "Move Members",
       "stream": "Stream",
       "disconnectMembers": "Disconnect Members",
-      "mentionEveryone": "Mention @everyone, @here and Roles"
+      "mentionEveryone": "Mention @everyone, @here and Roles",
+      "useSoundboard": "Use Soundboard",
+      "manageSoundboard": "Manage Soundboard"
     },
     "tristate": {
       "deny": "Deny",

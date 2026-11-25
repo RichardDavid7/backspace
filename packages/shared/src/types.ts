@@ -1189,9 +1189,15 @@ export interface InstanceStreamingLimits {
   directoryConfigured: boolean;
   bitrateMatrixOverrides: Record<string, number> | null;
   allowCustomBitrate: boolean;
+  /** Whether the Soundboard feature is enabled on this instance (default true). */
+  soundboardEnabled?: boolean;
+  /** Maximum custom soundboard clips per space (0 disables custom uploads, default 32). */
+  maxSoundboardSoundsPerScope?: number;
+  /** Maximum soundboard clips allowed to play simultaneously in a room (1–10, default 3). */
+  maxConcurrentSoundboardSounds?: number;
 }
 
-export type SoundboardScopeType = 'instance' | 'space' | 'dm';
+export type SoundboardScopeType = 'instance' | 'space';
 
 export interface SoundboardSound {
   id: string;
@@ -1212,6 +1218,9 @@ export interface SoundboardListResponse {
   scopedSounds: SoundboardSound[];
   canManageInstance: boolean;
   canManageScope: boolean;
+  soundboardEnabled?: boolean;
+  maxSoundsPerScope?: number;
+  maxConcurrentSounds?: number;
 }
 
 // ─── Federation Types ──────────────────────────────────────────────────────

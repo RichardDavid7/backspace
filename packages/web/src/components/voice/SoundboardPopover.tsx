@@ -6,7 +6,7 @@ import { getApiForOrigin, getMyUserIdForOrigin, useSpaceStore } from '../../stor
 import { useUIStore } from '../../stores/uiStore';
 import { AudioManager } from '../../audio/AudioManager';
 import { getActiveRoom } from '../../hooks/useLiveKit';
-import { dmCallChannelId, voiceSessionOrigin } from '../../utils/dmCall';
+import { voiceSessionOrigin } from '../../utils/dmCall';
 import { encodeSoundboardPlay } from '../../utils/soundboardProtocol';
 
 interface SoundboardPopoverProps {
@@ -27,18 +27,21 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   const setSoundboardVolume = useVoiceStore((s) => s.setSoundboardVolume);
   const setSoundboardMuted = useVoiceStore((s) => s.setSoundboardMuted);
   const markUserPlayingSoundboard = useVoiceStore((s) => s.markUserPlayingSoundboard);
+  const activeSoundboardClips = useVoiceStore((s) => s.activeSoundboardClips);
+  const tryStartSoundboardClip = useVoiceStore((s) => s.tryStartSoundboardClip);
+  const finishSoundboardClip = useVoiceStore((s) => s.finishSoundboardClip);
   const channelToSpaceMap = useSpaceStore((s) => s.channelToSpaceMap);
 
   const origin = voiceSessionOrigin(useVoiceStore.getState());
-  const dmChannelId = activeDmCall ? dmCallChannelId(activeDmCall) : null;
-  const spaceId = !dmChannelId && currentVoiceChannelId
+  const spaceId = !activeDmCall && currentVoiceChannelId
     ? (channelToSpaceMap.get(currentVoiceChannelId) ?? null)
     : null;
 
   const [instanceSounds, setInstanceSounds] = useState<SoundboardSound[]>([]);
   const [scopeSounds, setScopeSounds] = useState<SoundboardSound[]>([]);
+  const [maxConcurrentSounds, setMaxConcurrentSounds] = useState(3);
   const [loading, setLoading] = useState(false);
-  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
@@ -48,16 +51,16 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
       const client = getApiForOrigin(origin);
       const data = await client.soundboard.list({
         spaceId: spaceId ?? undefined,
-        dmChannelId: dmChannelId ?? undefined,
       });
       setInstanceSounds(data.instanceSounds);
       setScopeSounds(data.scopedSounds);
+      setMaxConcurrentSounds(data.maxConcurrentSounds ?? 3);
     } catch {
       addToast(t('soundboard.loadFailed'), 'warning');
     } finally {
       setLoading(false);
     }
-  }, [origin, spaceId, dmChannelId, addToast, t]);
+  }, [origin, spaceId, addToast, t]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -66,12 +69,6 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
 
   if (!isOpen) return null;
 
-  const activeScopeType: SoundboardScopeType | null = spaceId
-    ? 'space'
-    : dmChannelId
-      ? 'dm'
-      : null;
-  const activeScopeId = spaceId ?? dmChannelId ?? null;
   const totalSoundCount = instanceSounds.length + scopeSounds.length;
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -85,14 +82,13 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
   };
 
   const handlePlay = async (sound: SoundboardSound) => {
+    if (!tryStartSoundboardClip(sound.id, sound.durationMs, maxConcurrentSounds)) {
+      return;
+    }
+
     const resolvedUrl = sound.fileUrl.startsWith('/') && origin
       ? `${origin}${sound.fileUrl}`
       : sound.fileUrl;
-
-    setPlayingId(sound.id);
-    setTimeout(() => {
-      setPlayingId((curr) => (curr === sound.id ? null : curr));
-    }, Math.max(500, Math.min(sound.durationMs || 1500, 10_000)));
 
     const myUserId = getMyUserIdForOrigin(origin);
     if (myUserId && !soundboardMuted) {
@@ -100,9 +96,20 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     }
 
     if (!isDeafened && !soundboardMuted) {
-      void AudioManager.getInstance().playSoundUrl(resolvedUrl, {
-        volume: (soundboardVolume / 100) * 0.8,
-      });
+      void AudioManager.getInstance()
+        .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 })
+        .then((res) => {
+          if (!res) {
+            finishSoundboardClip(sound.id);
+            return;
+          }
+          res.source.addEventListener('ended', () => {
+            finishSoundboardClip(sound.id);
+          });
+        })
+        .catch(() => {
+          finishSoundboardClip(sound.id);
+        });
     }
 
     const room = getActiveRoom();
@@ -119,19 +126,55 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
     }
   };
 
+  const handlePreviewOnly = (e: React.MouseEvent, sound: SoundboardSound) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (previewingId === sound.id) return;
+
+    const resolvedUrl = sound.fileUrl.startsWith('/') && origin
+      ? `${origin}${sound.fileUrl}`
+      : sound.fileUrl;
+
+    setPreviewingId(sound.id);
+    void AudioManager.getInstance()
+      .playSoundUrl(resolvedUrl, { volume: (soundboardVolume / 100) * 0.8 })
+      .then((res) => {
+        if (!res) {
+          setPreviewingId((curr) => (curr === sound.id ? null : curr));
+          return;
+        }
+        res.source.addEventListener('ended', () => {
+          setPreviewingId((curr) => (curr === sound.id ? null : curr));
+        });
+      })
+      .catch(() => {
+        setPreviewingId((curr) => (curr === sound.id ? null : curr));
+      });
+  };
+
+  const atConcurrencyLimit = activeSoundboardClips.size >= maxConcurrentSounds;
+
   const renderSoundGrid = (items: SoundboardSound[]) => (
     <div className="grid grid-cols-2 gap-1.5">
       {items.map((sound) => {
-        const isPlaying = playingId === sound.id;
+        const isPlaying = activeSoundboardClips.has(sound.id);
+        const isPreviewing = previewingId === sound.id;
+        const isBlocked = !isPlaying && atConcurrencyLimit;
         return (
           <button
             key={sound.id}
             type="button"
+            disabled={isPlaying || isBlocked}
             onClick={() => void handlePlay(sound)}
-            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors cursor-pointer ${
+            onContextMenu={(e) => handlePreviewOnly(e, sound)}
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors ${
               isPlaying
-                ? 'bg-accent-primary/20 border-accent-primary/60 text-txt-primary'
-                : 'bg-surface-channel border-white/[0.06] hover:bg-interactive-hover hover:border-white/10 text-txt-primary'
+                ? 'bg-accent-primary/20 border-accent-primary/60 text-txt-primary cursor-default'
+                : isPreviewing
+                  ? 'bg-surface-elevated border-white/25 text-txt-primary cursor-pointer'
+                  : isBlocked
+                    ? 'bg-surface-channel border-white/[0.04] text-txt-primary opacity-45 cursor-not-allowed'
+                    : 'bg-surface-channel border-white/[0.06] hover:bg-interactive-hover hover:border-white/10 text-txt-primary cursor-pointer'
             }`}
             title={sound.name}
           >
@@ -317,11 +360,11 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           </div>
         ) : (
           <>
-            {activeScopeType && activeScopeId && renderSection(
-              activeScopeType === 'space' ? t('soundboard.spaceSection') : t('soundboard.dmSection'),
+            {spaceId && renderSection(
+              t('soundboard.spaceSection'),
               scopeSounds,
-              activeScopeType,
-              activeScopeId,
+              'space',
+              spaceId,
             )}
 
             {renderSection(
@@ -333,6 +376,13 @@ export function SoundboardPopover({ isOpen, onClose, className = '' }: Soundboar
           </>
         )}
       </div>
+
+      {/* Subtle footer hint for local right-click preview */}
+      {totalSoundCount > 0 && (
+        <div className="pt-1.5 border-t border-white/[0.05] text-[10px] text-txt-tertiary/80 text-center select-none">
+          {t('soundboard.previewHint')}
+        </div>
+      )}
     </div>
   );
 }

@@ -464,5 +464,22 @@
       "users": "Nutzer",
       "telemetry": "Hallo sagen"
     }
+  },
+  "soundboard": {
+    "description": "Verwalte die globale Verfügbarkeit des Soundboards, Upload-Limits und Standard-Clips.",
+    "saved": "Soundboard-Einstellungen gespeichert.",
+    "saveFailed": "Soundboard-Einstellungen konnten nicht gespeichert werden.",
+    "soundboardEnabled": {
+      "label": "Soundboard aktivieren",
+      "description": "Ermöglicht das Abspielen und Verwalten von Soundboard-Clips. Beim Deaktivieren werden alle Soundboard-Schaltflächen ausgeblendet."
+    },
+    "maxSoundboardPerScope": {
+      "label": "Max. eigene Sounds pro Space",
+      "description": "Begrenzt die Anzahl eigener Soundboard-Clips pro Space (0 deaktiviert eigene Uploads)."
+    },
+    "maxConcurrentSoundboard": {
+      "label": "Max. gleichzeitige Soundboard-Clips",
+      "description": "Verhindert Audio-Flooding, indem die Anzahl gleichzeitig abgespielter Clips in einem Sprachanruf begrenzt wird."
+    }
   }
 }

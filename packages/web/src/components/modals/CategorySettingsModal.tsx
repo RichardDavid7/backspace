@@ -26,6 +26,7 @@ const CATEGORY_PERMISSIONS: PermissionDef[] = [
   { key: 'CONNECT', bit: PermissionBits.CONNECT },
   { key: 'SPEAK', bit: PermissionBits.SPEAK },
   { key: 'STREAM', bit: PermissionBits.STREAM },
+  { key: 'USE_SOUNDBOARD', bit: PermissionBits.USE_SOUNDBOARD },
   { key: 'MUTE_MEMBERS', bit: PermissionBits.MUTE_MEMBERS },
   { key: 'DEAFEN_MEMBERS', bit: PermissionBits.DEAFEN_MEMBERS },
   { key: 'MOVE_MEMBERS', bit: PermissionBits.MOVE_MEMBERS },

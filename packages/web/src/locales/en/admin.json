@@ -464,5 +464,22 @@
       "users": "Users",
       "telemetry": "Say hi"
     }
+  },
+  "soundboard": {
+    "description": "Manage global Soundboard availability, upload limits and default clips.",
+    "saved": "Soundboard settings saved.",
+    "saveFailed": "Failed to save Soundboard settings.",
+    "soundboardEnabled": {
+      "label": "Enable Soundboard",
+      "description": "Allow users to play and manage soundboard clips on this instance. Disabling hides soundboard controls everywhere."
+    },
+    "maxSoundboardPerScope": {
+      "label": "Max custom sounds per space",
+      "description": "Limit how many soundboard clips each space can upload (0 disables custom uploads)."
+    },
+    "maxConcurrentSoundboard": {
+      "label": "Max simultaneous soundboard clips",
+      "description": "Prevents audio flooding by limiting how many clips can play at the same time in a voice call."
+    }
   }
 }

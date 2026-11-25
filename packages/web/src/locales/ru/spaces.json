@@ -462,7 +462,9 @@
       "moveMembers": "Перемещение участников",
       "stream": "Трансляция",
       "disconnectMembers": "Отключение участников",
-      "mentionEveryone": "Упоминать @everyone, @here и роли"
+      "mentionEveryone": "Упоминать @everyone, @here и роли",
+      "useSoundboard": "Использовать звуковую панель",
+      "manageSoundboard": "Управление звуковой панелью"
     },
     "tristate": {
       "deny": "Запретить",

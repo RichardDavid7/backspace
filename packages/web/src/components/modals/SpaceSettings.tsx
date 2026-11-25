@@ -626,6 +626,9 @@ export function SpaceSettingsModal() {
   const canManageSpace = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SPACE);
   const canManageRoles = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_ROLES);
   const canBanMembers = hasPermissionBit(mySpacePerms, PermissionBits.BAN_MEMBERS);
+  const canManageSoundboard = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SOUNDBOARD);
+  const soundboardEnabled = useSettingsStore((s) => s.streamingLimits?.soundboardEnabled ?? true);
+  const showSoundboardTab = soundboardEnabled && canManageSoundboard;
 
   // Reset tab and mobile view when modal opens. A caller may name the tab
   // to open on (`openModal('spaceSettings', { tab: 'discovery' })`); a tab
@@ -637,7 +640,7 @@ export function SpaceSettingsModal() {
     const allowed: Record<SpaceSettingsTab, boolean> = {
       overview: true,
       discovery: canManageSpace,
-      soundboard: true,
+      soundboard: showSoundboardTab,
       members: true,
       roles: canManageRoles,
       bans: canBanMembers,
@@ -693,7 +696,9 @@ export function SpaceSettingsModal() {
             <div className="border-t border-white/[0.04] my-2 mx-2" />
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
             <button onClick={() => handleTabClick('members')} className={tabClass('members')}>{t('common:labels.members')}</button>
-            <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
+            {showSoundboardTab && (
+              <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
+            )}
             {canManageRoles && (
               <button onClick={() => handleTabClick('roles')} className={tabClass('roles')}>{t('spaces:settings.nav.tabs.roles')}</button>
             )}
@@ -731,7 +736,9 @@ export function SpaceSettingsModal() {
               <div className="border-t border-white/[0.04] my-2 mx-2" />
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
               <button onClick={() => handleTabClick('members')} className={tabClass('members')}>{t('common:labels.members')}</button>
-              <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
+              {showSoundboardTab && (
+                <button onClick={() => handleTabClick('soundboard')} className={tabClass('soundboard')}>{t('voice:soundboard.title')}</button>
+              )}
               {canManageRoles && (
                 <button onClick={() => handleTabClick('roles')} className={tabClass('roles')}>{t('spaces:settings.nav.tabs.roles')}</button>
               )}
@@ -762,7 +769,7 @@ export function SpaceSettingsModal() {
               <SettingsPanelSuspense key={tab}>
                 {tab === 'overview' && <OverviewPanel spaceId={currentSpaceId} />}
                 {tab === 'discovery' && canManageSpace && <DiscoveryPanel spaceId={currentSpaceId} />}
-                {tab === 'soundboard' && <SoundboardManagerPanel scopeType="space" scopeId={currentSpaceId} origin={spaceOrigin} />}
+                {tab === 'soundboard' && showSoundboardTab && <SoundboardManagerPanel scopeType="space" scopeId={currentSpaceId} origin={spaceOrigin} />}
                 {tab === 'members' && <MembersPanel spaceId={currentSpaceId} />}
                 {tab === 'roles' && canManageRoles && <RolesPanel spaceId={currentSpaceId} />}
                 {tab === 'bans' && canBanMembers && <BansPanel spaceId={currentSpaceId} />}

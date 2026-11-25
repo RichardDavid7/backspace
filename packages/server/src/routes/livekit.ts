@@ -56,6 +56,7 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
     // Default: full publish (DM calls always get full permissions)
     let canSpeak = true;
     let canStream = true;
+    let canSoundboard = true;
 
     if (dmChannelId && typeof dmChannelId === 'string') {
       // DM call token
@@ -85,6 +86,7 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
       const perms = computePermissions(request.userId, spaceId, channelId);
       canSpeak = (perms & PermissionBits.SPEAK) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
       canStream = (perms & PermissionBits.STREAM) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
+      canSoundboard = (perms & PermissionBits.USE_SOUNDBOARD) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
       roomName = channelId;
     } else {
       return sendError(reply, 400, 'validation_failed');
@@ -95,6 +97,9 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
     const token = new AccessToken(config.livekit.apiKey, config.livekit.apiSecret, {
       identity,
       ttl: '1h',
+      // Server-signed, so peers can trust it: receivers drop soundboard clips
+      // from participants whose token says `sb=0` (missing USE_SOUNDBOARD).
+      attributes: { sb: canSoundboard ? '1' : '0' },
     });
 
     // Build canPublishSources based on permissions

@@ -43,6 +43,8 @@ export function usePermissionNames(): Record<PermissionKey, string> {
     MOVE_MEMBERS: t('spaces:permissions.names.moveMembers'),
     STREAM: t('spaces:permissions.names.stream'),
     DISCONNECT_MEMBERS: t('spaces:permissions.names.disconnectMembers'),
+    USE_SOUNDBOARD: t('spaces:permissions.names.useSoundboard'),
+    MANAGE_SOUNDBOARD: t('spaces:permissions.names.manageSoundboard'),
   }), [t]);
 }
 
